@@ -1,4 +1,4 @@
-.PHONY: test test-file lint format check install-deps install-parser
+.PHONY: test test-file lint format check install-deps install-parser dev
 
 # Setup nvim-treesitter for tests
 install-parser:
@@ -37,3 +37,9 @@ format:
 # Check formatting
 check:
 	@stylua --check lua/ spec/
+
+# Run development environment
+dev: install-deps
+	@echo "Starting development environment..."
+	@echo "Opening test workflow file..."
+	nvim -u dev.lua .github/workflows/test.yml
