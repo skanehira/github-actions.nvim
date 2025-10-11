@@ -8,22 +8,29 @@
 ---@field is_latest boolean Whether the current version is the latest
 ---@field error? string Error message if version check failed
 
+---@class VirtualTextIcons
+---@field outdated? string Icon for outdated versions (default: " ")
+---@field latest? string Icon for latest versions (default: " ")
+
 ---@class VirtualTextOptions
 ---@field prefix? string Prefix before version text (default: " ")
 ---@field suffix? string Suffix after version text (default: "")
----@field icons? table Icons for version status
+---@field icons? VirtualTextIcons Icons for version status
 ---@field highlight? string Default highlight group (default: "Comment")
 ---@field highlight_latest? string Highlight for latest (default: "GitHubActionsVersionLatest")
 ---@field highlight_outdated? string Highlight for outdated (default: "GitHubActionsVersionOutdated")
+---@field highlight_icon_latest? string Highlight for latest icon (default: "GitHubActionsIconLatest")
+---@field highlight_icon_outdated? string Highlight for outdated icon (default: "GitHubActionsIconOutdated")
 
----@class VirtualText
+---@class UiVersion
 local M = {}
 
--- Namespace for virtual text
+-- Namespace for version virtual text
 local namespace_id = nil
 
 -- Default options based on docs/design.md
-local default_opts = {
+---@type VirtualTextOptions
+M.default_options = {
   prefix = ' ',
   suffix = '',
   icons = {
@@ -51,10 +58,10 @@ end
 ---@return table merged_opts
 local function merge_opts(opts)
   if not opts then
-    return vim.deepcopy(default_opts)
+    return vim.deepcopy(M.default_options)
   end
 
-  local merged = vim.deepcopy(default_opts)
+  local merged = vim.deepcopy(M.default_options)
 
   if opts.prefix ~= nil then
     merged.prefix = opts.prefix

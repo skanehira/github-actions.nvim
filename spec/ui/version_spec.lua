@@ -1,18 +1,18 @@
--- Test for virtual text UI module
+-- Test for version UI module
 
 -- Load minimal init for tests
 dofile('spec/minimal_init.lua')
 
 local helpers = require('spec.helpers.buffer_spec')
 
-describe('ui.virtual_text', function()
-  ---@type VirtualText
-  local virtual_text
+describe('ui.version', function()
+  ---@type UiVersion
+  local ui_version
   ---@type number
   local test_bufnr
 
   before_each(function()
-    virtual_text = require('github-actions.ui.virtual_text')
+    ui_version = require('github-actions.ui.version')
     test_bufnr = helpers.create_yaml_buffer([[
 name: Test
 jobs:
@@ -24,8 +24,8 @@ jobs:
   end)
 
   after_each(function()
-    if virtual_text then
-      virtual_text.clear_virtual_text(test_bufnr)
+    if ui_version then
+      ui_version.clear_virtual_text(test_bufnr)
     end
     helpers.delete_buffer(test_bufnr)
   end)
@@ -40,10 +40,10 @@ jobs:
         is_latest = true,
       }
 
-      virtual_text.set_virtual_text(test_bufnr, version_info)
+      ui_version.set_virtual_text(test_bufnr, version_info)
 
       -- Get extmarks to verify virtual text was set
-      local ns = virtual_text.get_namespace()
+      local ns = ui_version.get_namespace()
       -- marks structure: array of [id, row, col, details]
       -- Example: { { 1, 4, 0, { virt_text = {...}, ... } }, ... }
       local marks = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, { details = true })
@@ -96,9 +96,9 @@ jobs:
         is_latest = false,
       }
 
-      virtual_text.set_virtual_text(test_bufnr, version_info)
+      ui_version.set_virtual_text(test_bufnr, version_info)
 
-      local ns = virtual_text.get_namespace()
+      local ns = ui_version.get_namespace()
       local marks = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, { details = true })
 
       assert.equals(1, #marks, 'should have one extmark')
@@ -125,7 +125,7 @@ jobs:
 
       -- Should not throw error with invalid buffer
       assert.has.no.errors(function()
-        virtual_text.set_virtual_text(999999, version_info)
+        ui_version.set_virtual_text(999999, version_info)
       end)
     end)
   end)
@@ -149,9 +149,9 @@ jobs:
         },
       }
 
-      virtual_text.set_virtual_texts(test_bufnr, version_infos)
+      ui_version.set_virtual_texts(test_bufnr, version_infos)
 
-      local ns = virtual_text.get_namespace()
+      local ns = ui_version.get_namespace()
       local marks = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, { details = true })
 
       assert.equals(2, #marks, 'should have two extmarks')
@@ -163,10 +163,10 @@ jobs:
 
     it('should handle empty version_infos array', function()
       assert.has.no.errors(function()
-        virtual_text.set_virtual_texts(test_bufnr, {})
+        ui_version.set_virtual_texts(test_bufnr, {})
       end)
 
-      local ns = virtual_text.get_namespace()
+      local ns = ui_version.get_namespace()
       local marks = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, {})
 
       assert.equals(0, #marks, 'should have no extmarks')
@@ -183,15 +183,15 @@ jobs:
         is_latest = false,
       }
 
-      virtual_text.set_virtual_text(test_bufnr, version_info)
+      ui_version.set_virtual_text(test_bufnr, version_info)
 
       -- Verify mark exists
-      local ns = virtual_text.get_namespace()
+      local ns = ui_version.get_namespace()
       local marks_before = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, {})
       assert.equals(1, #marks_before, 'should have one mark before clear')
 
       -- Clear
-      virtual_text.clear_virtual_text(test_bufnr)
+      ui_version.clear_virtual_text(test_bufnr)
 
       -- Verify marks are cleared
       local marks_after = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, {})
@@ -200,7 +200,7 @@ jobs:
 
     it('should handle invalid buffer gracefully', function()
       assert.has.no.errors(function()
-        virtual_text.clear_virtual_text(999999)
+        ui_version.clear_virtual_text(999999)
       end)
     end)
   end)
@@ -220,9 +220,9 @@ jobs:
         suffix = '<<',
       }
 
-      virtual_text.set_virtual_text(test_bufnr, version_info, opts)
+      ui_version.set_virtual_text(test_bufnr, version_info, opts)
 
-      local ns = virtual_text.get_namespace()
+      local ns = ui_version.get_namespace()
       local marks = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, { details = true })
       local virt_text = marks[1][4].virt_text
       if not virt_text then
@@ -256,9 +256,9 @@ jobs:
         },
       }
 
-      virtual_text.set_virtual_text(test_bufnr, version_info, opts)
+      ui_version.set_virtual_text(test_bufnr, version_info, opts)
 
-      local ns = virtual_text.get_namespace()
+      local ns = ui_version.get_namespace()
       local marks = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, { details = true })
       local virt_text = marks[1][4].virt_text
       if not virt_text then
