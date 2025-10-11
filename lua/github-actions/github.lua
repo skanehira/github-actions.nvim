@@ -1,4 +1,4 @@
----@class GhCli
+---@class Github
 local M = {}
 
 ---Parse JSON response from gh CLI

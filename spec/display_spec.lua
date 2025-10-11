@@ -5,15 +5,11 @@ dofile('spec/minimal_init.lua')
 
 local helpers = require('spec.helpers.buffer_spec')
 
-describe('ui.version', function()
-  ---@type UiVersion
-  local ui_version
+describe('display', function()
+  ---@type Display
+  local display = require('github-actions.display')
   ---@type number
-  local test_bufnr
-
-  before_each(function()
-    ui_version = require('github-actions.ui.version')
-    test_bufnr = helpers.create_yaml_buffer([[
+  local test_bufnr = helpers.create_yaml_buffer([[
 name: Test
 jobs:
   test:
@@ -21,13 +17,9 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v4
 ]])
-  end)
 
   after_each(function()
-    if ui_version then
-      ui_version.clear_virtual_text(test_bufnr)
-    end
-    helpers.delete_buffer(test_bufnr)
+    display.clear_virtual_text(test_bufnr)
   end)
 
   describe('set_virtual_text', function()
@@ -40,10 +32,10 @@ jobs:
         is_latest = true,
       }
 
-      ui_version.set_virtual_text(test_bufnr, version_info)
+      display.set_virtual_text(test_bufnr, version_info)
 
       -- Get extmarks to verify virtual text was set
-      local ns = ui_version.get_namespace()
+      local ns = display.get_namespace()
       -- marks structure: array of [id, row, col, details]
       -- Example: { { 1, 4, 0, { virt_text = {...}, ... } }, ... }
       local marks = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, { details = true })
@@ -96,9 +88,9 @@ jobs:
         is_latest = false,
       }
 
-      ui_version.set_virtual_text(test_bufnr, version_info)
+      display.set_virtual_text(test_bufnr, version_info)
 
-      local ns = ui_version.get_namespace()
+      local ns = display.get_namespace()
       local marks = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, { details = true })
 
       assert.equals(1, #marks, 'should have one extmark')
@@ -125,7 +117,7 @@ jobs:
 
       -- Should not throw error with invalid buffer
       assert.has.no.errors(function()
-        ui_version.set_virtual_text(999999, version_info)
+        display.set_virtual_text(999999, version_info)
       end)
     end)
   end)
@@ -149,9 +141,9 @@ jobs:
         },
       }
 
-      ui_version.set_virtual_texts(test_bufnr, version_infos)
+      display.set_virtual_texts(test_bufnr, version_infos)
 
-      local ns = ui_version.get_namespace()
+      local ns = display.get_namespace()
       local marks = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, { details = true })
 
       assert.equals(2, #marks, 'should have two extmarks')
@@ -163,10 +155,10 @@ jobs:
 
     it('should handle empty version_infos array', function()
       assert.has.no.errors(function()
-        ui_version.set_virtual_texts(test_bufnr, {})
+        display.set_virtual_texts(test_bufnr, {})
       end)
 
-      local ns = ui_version.get_namespace()
+      local ns = display.get_namespace()
       local marks = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, {})
 
       assert.equals(0, #marks, 'should have no extmarks')
@@ -183,15 +175,15 @@ jobs:
         is_latest = false,
       }
 
-      ui_version.set_virtual_text(test_bufnr, version_info)
+      display.set_virtual_text(test_bufnr, version_info)
 
       -- Verify mark exists
-      local ns = ui_version.get_namespace()
+      local ns = display.get_namespace()
       local marks_before = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, {})
       assert.equals(1, #marks_before, 'should have one mark before clear')
 
       -- Clear
-      ui_version.clear_virtual_text(test_bufnr)
+      display.clear_virtual_text(test_bufnr)
 
       -- Verify marks are cleared
       local marks_after = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, {})
@@ -200,7 +192,7 @@ jobs:
 
     it('should handle invalid buffer gracefully', function()
       assert.has.no.errors(function()
-        ui_version.clear_virtual_text(999999)
+        display.clear_virtual_text(999999)
       end)
     end)
   end)
@@ -220,9 +212,9 @@ jobs:
         suffix = '<<',
       }
 
-      ui_version.set_virtual_text(test_bufnr, version_info, opts)
+      display.set_virtual_text(test_bufnr, version_info, opts)
 
-      local ns = ui_version.get_namespace()
+      local ns = display.get_namespace()
       local marks = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, { details = true })
       local virt_text = marks[1][4].virt_text
       if not virt_text then
@@ -256,9 +248,9 @@ jobs:
         },
       }
 
-      ui_version.set_virtual_text(test_bufnr, version_info, opts)
+      display.set_virtual_text(test_bufnr, version_info, opts)
 
-      local ns = ui_version.get_namespace()
+      local ns = display.get_namespace()
       local marks = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, { details = true })
       local virt_text = marks[1][4].virt_text
       if not virt_text then
@@ -267,6 +259,55 @@ jobs:
 
       -- Check for custom icon
       assert.equals('⚠', virt_text[1][1], 'should have custom outdated icon')
+    end)
+  end)
+
+  describe('show_versions', function()
+    it('should clear and display version infos', function()
+      local version_infos = {
+        {
+          line = 0,
+          col = 0,
+          current_version = 'v3',
+          latest_version = 'v4.0.0',
+          is_latest = false,
+        },
+        {
+          line = 1,
+          col = 0,
+          current_version = 'v4',
+          latest_version = 'v4.0.0',
+          is_latest = true,
+        },
+      }
+
+      display.show_versions(test_bufnr, version_infos)
+
+      local ns = display.get_namespace()
+      local marks = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, {})
+      assert.equals(2, #marks)
+    end)
+
+    it('should handle empty version infos', function()
+      assert.has.no.errors(function()
+        display.show_versions(test_bufnr, {})
+      end)
+    end)
+
+    it('should handle invalid buffer gracefully', function()
+      local version_infos = {
+        {
+          line = 0,
+          col = 0,
+          current_version = 'v3',
+          latest_version = 'v4.0.0',
+          is_latest = false,
+        },
+      }
+
+      assert.has.no.errors(function()
+        display.show_versions(999999, version_infos)
+      end)
     end)
   end)
 end)

@@ -6,7 +6,7 @@ dofile('spec/minimal_init.lua')
 local helpers = require('spec.helpers.buffer_spec')
 
 describe('workflow parser', function()
-  local parser = require('github-actions.parser.workflow')
+  local parser = require('github-actions.workflow.parser')
 
   describe('parse', function()
     it('should extract actions from workflow file', function()

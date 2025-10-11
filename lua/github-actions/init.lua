@@ -4,8 +4,9 @@
 ---@class GithubActions
 local M = {}
 
-local checker = require('github-actions.checker')
-local ui = require('github-actions.ui')
+local checker = require('github-actions.workflow.checker')
+local display = require('github-actions.display')
+local highlights = require('github-actions.lib.highlights')
 
 ---Current configuration
 ---@type GithubActionsConfig
@@ -15,11 +16,11 @@ local config = {}
 ---@param opts? GithubActionsConfig User configuration
 function M.setup(opts)
   -- Setup highlight groups
-  ui.highlights.setup()
+  highlights.setup()
 
   -- Build default configuration (must be done here to get current default_options)
   local default_config = {
-    virtual_text = vim.deepcopy(ui.version.default_options),
+    virtual_text = vim.deepcopy(display.default_options),
   }
 
   -- Merge user config with defaults
@@ -29,7 +30,18 @@ end
 ---Check and update version information for current buffer
 function M.check_versions()
   local bufnr = vim.api.nvim_get_current_buf()
-  checker.update_buffer(bufnr, config.virtual_text)
+
+  -- Business logic: check versions
+  checker.check_versions(bufnr, function(version_infos, error)
+    -- Error handling
+    if error then
+      vim.notify(error, vim.log.levels.ERROR)
+      return
+    end
+
+    -- UI: display results
+    display.show_versions(bufnr, version_infos, config.virtual_text)
+  end)
 end
 
 return M

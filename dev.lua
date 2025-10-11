@@ -55,12 +55,15 @@ end, { desc = 'Clear version virtual text' })
 
 -- Print helpful message
 vim.defer_fn(function()
-  print('GitHub Actions plugin loaded!')
-  print('Keymaps:')
-  print('  <leader>gc - Check versions (uses cache)')
-  print('  <leader>gC - Clear virtual text')
-  print('  <leader>gX - Clear version cache')
-  print('')
-  print('Auto-check: Versions are checked on buffer enter and save')
-  print('Cache: First check fetches from API, subsequent checks use cache')
+  require('github-actions').check_versions()
 end, 100)
+
+-- Auto-check on buffer write (uses cache for fast updates)
+local bufnr = vim.api.nvim_get_current_buf()
+vim.api.nvim_create_autocmd('BufWritePost', {
+  buffer = bufnr,
+  callback = function()
+    require('github-actions').check_versions()
+  end,
+  desc = 'Check GitHub Actions versions after save',
+})

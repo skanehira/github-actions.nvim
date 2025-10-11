@@ -1,10 +1,10 @@
----@class VersionChecker
+---@class Semver
 local M = {}
 
 ---Parse version string into parts array
 ---@param version_str string|nil Version string (e.g., "v3.5.1", "v3", "3.5")
 ---@return number[] parts Array of version parts (e.g., {3, 5, 1})
-function M.parse_version(version_str)
+function M.parse(version_str)
   if not version_str or version_str == '' then
     return {}
   end
@@ -30,9 +30,9 @@ end
 ---@param current_version string|nil Current version (e.g., "v3", "v3.5", "v3.5.1")
 ---@param latest_version string|nil Latest available version
 ---@return boolean is_latest True if current is up-to-date
-function M.compare_versions(current_version, latest_version)
-  local curr_parts = M.parse_version(current_version)
-  local latest_parts = M.parse_version(latest_version)
+function M.compare(current_version, latest_version)
+  local curr_parts = M.parse(current_version)
+  local latest_parts = M.parse(latest_version)
 
   -- If parsing failed, consider it outdated
   if #curr_parts == 0 or #latest_parts == 0 then
@@ -56,29 +56,6 @@ function M.compare_versions(current_version, latest_version)
   end
 
   return true -- All compared parts are equal or newer
-end
-
----Create version info from action and latest version
----@param action Action Parsed action usage from workflow
----@param latest_version string|nil Latest version from GitHub API
----@param error_msg string|nil Error message if version check failed
----@return VersionInfo version_info Version information for display
-function M.create_version_info(action, latest_version, error_msg)
-  ---@type VersionInfo
-  local version_info = {
-    line = action.line,
-    col = action.col,
-    current_version = action.version,
-    latest_version = latest_version,
-    is_latest = false,
-    error = error_msg,
-  }
-
-  if not error_msg and latest_version then
-    version_info.is_latest = M.compare_versions(action.version, latest_version)
-  end
-
-  return version_info
 end
 
 return M

@@ -42,4 +42,4 @@ check:
 dev: install-deps
 	@echo "Starting development environment..."
 	@echo "Opening test workflow file..."
-	nvim -u dev.lua .github/workflows/test.yml
+	nvim -u dev.lua spec/fixtures/test.yml

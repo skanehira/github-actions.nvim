@@ -22,7 +22,7 @@
 ---@field highlight_icon_latest? string Highlight for latest icon (default: "GitHubActionsIconLatest")
 ---@field highlight_icon_outdated? string Highlight for outdated icon (default: "GitHubActionsIconOutdated")
 
----@class UiVersion
+---@class Display
 local M = {}
 
 -- Namespace for version virtual text
@@ -174,6 +174,25 @@ function M.clear_virtual_text(bufnr)
 
   local ns = M.get_namespace()
   vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+end
+
+---Clear and display version information (high-level UI function)
+---@param bufnr number Buffer number
+---@param version_infos VersionInfo[] List of version information
+---@param opts? VirtualTextOptions Display options
+function M.show_versions(bufnr, version_infos, opts)
+  -- Validate buffer
+  if not vim.api.nvim_buf_is_valid(bufnr) then
+    return
+  end
+
+  -- Clear existing virtual text
+  M.clear_virtual_text(bufnr)
+
+  -- Display new version infos
+  if version_infos and #version_infos > 0 then
+    M.set_virtual_texts(bufnr, version_infos, opts)
+  end
 end
 
 return M

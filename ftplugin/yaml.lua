@@ -15,14 +15,6 @@ if not ok then
   return
 end
 
--- Create buffer-local keymaps
-vim.keymap.set('n', '<leader>gc', function()
-  github_actions.check_versions()
-end, {
-  buffer = bufnr,
-  desc = 'Check GitHub Actions versions',
-})
-
 -- Auto-check on buffer enter
 vim.defer_fn(function()
   if vim.api.nvim_buf_is_valid(bufnr) then
