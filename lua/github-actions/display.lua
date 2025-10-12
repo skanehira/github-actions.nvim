@@ -29,8 +29,8 @@ local namespace_id = nil
 ---@type VirtualTextOptions
 M.default_options = {
   icons = {
-    outdated = ' ',
-    latest = ' ',
+    outdated = '',
+    latest = '',
   },
   highlight_latest = 'GitHubActionsVersionLatest',
   highlight_outdated = 'GitHubActionsVersionOutdated',
@@ -153,7 +153,7 @@ end
 
 ---Clear and display version information (high-level UI function)
 ---@param bufnr number Buffer number
----@param version_infos VersionInfo[] List of version information
+---@param version_infos VersionInfo[]|nil List of version information
 ---@param opts? VirtualTextOptions Display options
 function M.show_versions(bufnr, version_infos, opts)
   -- Validate buffer
