@@ -1,5 +1,5 @@
 ---@class GithubActionsConfig
----@field virtual_text? VirtualTextOptions Virtual text display options
+---@field actions? VirtualTextOptions Display options for GitHub Actions version checking
 
 ---@class GithubActions
 local M = {}
@@ -20,7 +20,7 @@ function M.setup(opts)
 
   -- Build default configuration (must be done here to get current default_options)
   local default_config = {
-    virtual_text = vim.deepcopy(display.default_options),
+    actions = vim.deepcopy(display.default_options),
   }
 
   -- Merge user config with defaults
@@ -40,7 +40,7 @@ function M.check_versions()
     end
 
     -- UI: display results
-    display.show_versions(bufnr, version_infos, config.virtual_text)
+    display.show_versions(bufnr, version_infos, config.actions)
   end)
 end
 
