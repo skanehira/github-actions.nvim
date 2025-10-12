@@ -5,239 +5,282 @@ dofile('spec/minimal_init.lua')
 
 describe('lib.semver', function()
   ---@type Semver
-  local semver
-
-  before_each(function()
-    semver = require('github-actions.lib.semver')
-  end)
+  local semver = require('github-actions.lib.semver')
 
   describe('parse', function()
-    it('should parse major version only', function()
-      local parts = semver.parse('v3')
-      assert.are.same({ 3 }, parts)
-    end)
+    local test_cases = {
+      {
+        name = 'should parse major version only',
+        input = 'v3',
+        expected = { 3 },
+      },
+      {
+        name = 'should parse major.minor version',
+        input = 'v3.5',
+        expected = { 3, 5 },
+      },
+      {
+        name = 'should parse full semantic version',
+        input = 'v3.5.1',
+        expected = { 3, 5, 1 },
+      },
+      {
+        name = 'should parse version without v prefix',
+        input = '3.5.1',
+        expected = { 3, 5, 1 },
+      },
+      {
+        name = 'should handle version with text suffix',
+        input = 'v3.5.1-beta',
+        expected = { 3, 5, 1 },
+      },
+      {
+        name = 'should handle invalid version string',
+        input = 'invalid',
+        expected = {},
+      },
+      {
+        name = 'should handle nil version',
+        input = nil,
+        expected = {},
+      },
+      {
+        name = 'should handle empty string',
+        input = '',
+        expected = {},
+      },
+      {
+        name = 'should parse version with prerelease tag',
+        input = 'v3.5.1-alpha.1',
+        expected = { 3, 5, 1 },
+      },
+      {
+        name = 'should only take first 3 numeric parts',
+        input = '3.5.1.999',
+        expected = { 3, 5, 1 },
+      },
+      {
+        name = 'should handle version string with only text',
+        input = 'vv',
+        expected = {},
+      },
+    }
 
-    it('should parse major.minor version', function()
-      local parts = semver.parse('v3.5')
-      assert.are.same({ 3, 5 }, parts)
-    end)
-
-    it('should parse full semantic version', function()
-      local parts = semver.parse('v3.5.1')
-      assert.are.same({ 3, 5, 1 }, parts)
-    end)
-
-    it('should parse version without v prefix', function()
-      local parts = semver.parse('3.5.1')
-      assert.are.same({ 3, 5, 1 }, parts)
-    end)
-
-    it('should handle version with text suffix', function()
-      local parts = semver.parse('v3.5.1-beta')
-      assert.are.same({ 3, 5, 1 }, parts)
-    end)
-
-    it('should handle invalid version string', function()
-      local parts = semver.parse('invalid')
-      assert.are.same({}, parts)
-    end)
-
-    it('should handle nil version', function()
-      local parts = semver.parse(nil)
-      assert.are.same({}, parts)
-    end)
-
-    it('should handle empty string', function()
-      local parts = semver.parse('')
-      assert.are.same({}, parts)
-    end)
-
-    it('should parse version with prerelease tag', function()
-      local parts = semver.parse('v3.5.1-alpha.1')
-      assert.are.same({ 3, 5, 1 }, parts)
-    end)
-
-    it('should only take first 3 numeric parts', function()
-      local parts = semver.parse('3.5.1.999')
-      assert.are.same({ 3, 5, 1 }, parts)
-    end)
-
-    it('should handle version string with only text', function()
-      local parts = semver.parse('vv')
-      assert.are.same({}, parts)
-    end)
+    for _, tc in ipairs(test_cases) do
+      it(tc.name, function()
+        local parts = semver.parse(tc.input)
+        assert.are.same(tc.expected, parts)
+      end)
+    end
   end)
 
   describe('compare', function()
-    describe('major version only', function()
-      it('should detect outdated major version', function()
-        local is_latest = semver.compare('v3', 'v4.1.0')
-        assert.is_false(is_latest)
-      end)
+    local test_cases = {
+      -- major version only
+      {
+        name = 'should detect outdated major version',
+        current = 'v3',
+        latest = 'v4.1.0',
+        expected = false,
+      },
+      {
+        name = 'should detect latest major version',
+        current = 'v4',
+        latest = 'v4.1.0',
+        expected = true,
+      },
+      {
+        name = 'should detect newer major version',
+        current = 'v5',
+        latest = 'v4.1.0',
+        expected = true,
+      },
+      -- major.minor version
+      {
+        name = 'should detect outdated minor version',
+        current = 'v4.0',
+        latest = 'v4.1.5',
+        expected = false,
+      },
+      {
+        name = 'should detect latest minor version',
+        current = 'v4.1',
+        latest = 'v4.1.5',
+        expected = true,
+      },
+      {
+        name = 'should detect outdated major in major.minor',
+        current = 'v3.9',
+        latest = 'v4.0.0',
+        expected = false,
+      },
+      -- full semantic version
+      {
+        name = 'should detect outdated patch version',
+        current = 'v3.5.1',
+        latest = 'v3.5.2',
+        expected = false,
+      },
+      {
+        name = 'should detect latest patch version',
+        current = 'v3.5.2',
+        latest = 'v3.5.2',
+        expected = true,
+      },
+      {
+        name = 'should detect outdated minor in full version',
+        current = 'v3.4.5',
+        latest = 'v3.5.0',
+        expected = false,
+      },
+      {
+        name = 'should detect outdated major in full version',
+        current = 'v2.9.9',
+        latest = 'v3.0.0',
+        expected = false,
+      },
+      -- equal versions
+      {
+        name = 'should detect equal full versions',
+        current = 'v3.5.1',
+        latest = 'v3.5.1',
+        expected = true,
+      },
+      {
+        name = 'should detect equal versions without v prefix',
+        current = '3.5.1',
+        latest = '3.5.1',
+        expected = true,
+      },
+      {
+        name = 'should compare major only with equal major',
+        current = 'v3',
+        latest = 'v3.0.0',
+        expected = true,
+      },
+      {
+        name = 'should compare major.minor with equal major.minor',
+        current = 'v3.5',
+        latest = 'v3.5.0',
+        expected = true,
+      },
+      -- newer current version
+      {
+        name = 'should detect newer patch version',
+        current = 'v3.5.2',
+        latest = 'v3.5.1',
+        expected = true,
+      },
+      {
+        name = 'should detect newer minor version',
+        current = 'v3.6.0',
+        latest = 'v3.5.9',
+        expected = true,
+      },
+      {
+        name = 'should detect newer major version',
+        current = 'v4.0.0',
+        latest = 'v3.9.9',
+        expected = true,
+      },
+      -- latest version with fewer parts
+      {
+        name = 'should compare when latest has only major',
+        current = 'v3.5.1',
+        latest = 'v3',
+        expected = true,
+      },
+      {
+        name = 'should compare when latest has only major.minor',
+        current = 'v3.5.1',
+        latest = 'v3.4',
+        expected = true,
+      },
+      {
+        name = 'should detect outdated when latest major is higher',
+        current = 'v3.5.1',
+        latest = 'v4',
+        expected = false,
+      },
+      -- prerelease versions
+      {
+        name = 'should compare prerelease versions by numeric parts only',
+        current = 'v3.5.1-beta',
+        latest = 'v3.5.1',
+        expected = true,
+      },
+      {
+        name = 'should detect outdated prerelease version',
+        current = 'v3.5.0',
+        latest = 'v3.5.1-beta',
+        expected = false,
+      },
+      -- edge cases
+      {
+        name = 'should handle version without v prefix',
+        current = '3.5.1',
+        latest = '3.5.2',
+        expected = false,
+      },
+      {
+        name = 'should handle nil current version',
+        current = nil,
+        latest = 'v4.0.0',
+        expected = false,
+      },
+      {
+        name = 'should handle nil latest version',
+        current = 'v4',
+        latest = nil,
+        expected = false,
+      },
+      {
+        name = 'should handle both nil versions',
+        current = nil,
+        latest = nil,
+        expected = false,
+      },
+      {
+        name = 'should handle empty string current version',
+        current = '',
+        latest = 'v3.5.1',
+        expected = false,
+      },
+      {
+        name = 'should handle empty string latest version',
+        current = 'v3.5.1',
+        latest = '',
+        expected = false,
+      },
+      {
+        name = 'should handle invalid current version',
+        current = 'invalid',
+        latest = 'v3.5.1',
+        expected = false,
+      },
+      {
+        name = 'should handle invalid latest version',
+        current = 'v3.5.1',
+        latest = 'invalid',
+        expected = false,
+      },
+      {
+        name = 'should handle invalid versions',
+        current = 'invalid',
+        latest = 'also-invalid',
+        expected = false,
+      },
+    }
 
-      it('should detect latest major version', function()
-        local is_latest = semver.compare('v4', 'v4.1.0')
-        assert.is_true(is_latest)
+    for _, tc in ipairs(test_cases) do
+      it(tc.name, function()
+        local is_latest = semver.compare(tc.current, tc.latest)
+        if tc.expected then
+          assert.is_true(is_latest)
+        else
+          assert.is_false(is_latest)
+        end
       end)
-
-      it('should detect newer major version', function()
-        local is_latest = semver.compare('v5', 'v4.1.0')
-        assert.is_true(is_latest)
-      end)
-    end)
-
-    describe('major.minor version', function()
-      it('should detect outdated minor version', function()
-        local is_latest = semver.compare('v4.0', 'v4.1.5')
-        assert.is_false(is_latest)
-      end)
-
-      it('should detect latest minor version', function()
-        local is_latest = semver.compare('v4.1', 'v4.1.5')
-        assert.is_true(is_latest)
-      end)
-
-      it('should detect outdated major in major.minor', function()
-        local is_latest = semver.compare('v3.9', 'v4.0.0')
-        assert.is_false(is_latest)
-      end)
-    end)
-
-    describe('full semantic version', function()
-      it('should detect outdated patch version', function()
-        local is_latest = semver.compare('v3.5.1', 'v3.5.2')
-        assert.is_false(is_latest)
-      end)
-
-      it('should detect latest patch version', function()
-        local is_latest = semver.compare('v3.5.2', 'v3.5.2')
-        assert.is_true(is_latest)
-      end)
-
-      it('should detect outdated minor in full version', function()
-        local is_latest = semver.compare('v3.4.5', 'v3.5.0')
-        assert.is_false(is_latest)
-      end)
-
-      it('should detect outdated major in full version', function()
-        local is_latest = semver.compare('v2.9.9', 'v3.0.0')
-        assert.is_false(is_latest)
-      end)
-    end)
-
-    describe('equal versions', function()
-      it('should detect equal full versions', function()
-        local is_latest = semver.compare('v3.5.1', 'v3.5.1')
-        assert.is_true(is_latest)
-      end)
-
-      it('should detect equal versions without v prefix', function()
-        local is_latest = semver.compare('3.5.1', '3.5.1')
-        assert.is_true(is_latest)
-      end)
-
-      it('should compare major only with equal major', function()
-        local is_latest = semver.compare('v3', 'v3.0.0')
-        assert.is_true(is_latest)
-      end)
-
-      it('should compare major.minor with equal major.minor', function()
-        local is_latest = semver.compare('v3.5', 'v3.5.0')
-        assert.is_true(is_latest)
-      end)
-    end)
-
-    describe('newer current version', function()
-      it('should detect newer patch version', function()
-        local is_latest = semver.compare('v3.5.2', 'v3.5.1')
-        assert.is_true(is_latest)
-      end)
-
-      it('should detect newer minor version', function()
-        local is_latest = semver.compare('v3.6.0', 'v3.5.9')
-        assert.is_true(is_latest)
-      end)
-
-      it('should detect newer major version', function()
-        local is_latest = semver.compare('v4.0.0', 'v3.9.9')
-        assert.is_true(is_latest)
-      end)
-    end)
-
-    describe('latest version with fewer parts', function()
-      it('should compare when latest has only major', function()
-        local is_latest = semver.compare('v3.5.1', 'v3')
-        assert.is_true(is_latest)
-      end)
-
-      it('should compare when latest has only major.minor', function()
-        local is_latest = semver.compare('v3.5.1', 'v3.4')
-        assert.is_true(is_latest)
-      end)
-
-      it('should detect outdated when latest major is higher', function()
-        local is_latest = semver.compare('v3.5.1', 'v4')
-        assert.is_false(is_latest)
-      end)
-    end)
-
-    describe('prerelease versions', function()
-      it('should compare prerelease versions by numeric parts only', function()
-        local is_latest = semver.compare('v3.5.1-beta', 'v3.5.1')
-        assert.is_true(is_latest)
-      end)
-
-      it('should detect outdated prerelease version', function()
-        local is_latest = semver.compare('v3.5.0', 'v3.5.1-beta')
-        assert.is_false(is_latest)
-      end)
-    end)
-
-    describe('edge cases', function()
-      it('should handle version without v prefix', function()
-        local is_latest = semver.compare('3.5.1', '3.5.2')
-        assert.is_false(is_latest)
-      end)
-
-      it('should handle nil current version', function()
-        local is_latest = semver.compare(nil, 'v4.0.0')
-        assert.is_false(is_latest)
-      end)
-
-      it('should handle nil latest version', function()
-        local is_latest = semver.compare('v4', nil)
-        assert.is_false(is_latest)
-      end)
-
-      it('should handle both nil versions', function()
-        local is_latest = semver.compare(nil, nil)
-        assert.is_false(is_latest)
-      end)
-
-      it('should handle empty string current version', function()
-        local is_latest = semver.compare('', 'v3.5.1')
-        assert.is_false(is_latest)
-      end)
-
-      it('should handle empty string latest version', function()
-        local is_latest = semver.compare('v3.5.1', '')
-        assert.is_false(is_latest)
-      end)
-
-      it('should handle invalid current version', function()
-        local is_latest = semver.compare('invalid', 'v3.5.1')
-        assert.is_false(is_latest)
-      end)
-
-      it('should handle invalid latest version', function()
-        local is_latest = semver.compare('v3.5.1', 'invalid')
-        assert.is_false(is_latest)
-      end)
-
-      it('should handle invalid versions', function()
-        local is_latest = semver.compare('invalid', 'also-invalid')
-        assert.is_false(is_latest)
-      end)
-    end)
+    end
   end)
 end)
