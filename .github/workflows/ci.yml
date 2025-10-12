@@ -25,6 +25,16 @@ jobs:
         uses: nvim-neorocks/nvim-busted-action@v1
         with:
           nvim_version: ${{ matrix.neovim }}
+          before: |
+            set -euo pipefail
+            mkdir -p lua_modules
+            for dir in bin lib share; do
+              target="$HOME/.luarocks/$dir"
+              if [ -d "$target" ]; then
+                rm -rf "lua_modules/$dir"
+                ln -s "$target" "lua_modules/$dir"
+              fi
+            done
 
   lint:
     runs-on: ubuntu-latest

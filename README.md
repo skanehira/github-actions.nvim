@@ -53,11 +53,14 @@ require('github-actions').setup({
     icons = {
       outdated = '',  -- Icon for outdated versions (default)
       latest = '',    -- Icon for latest versions (default)
+      error = '',     -- Icon for error (default)
     },
     highlight_latest = 'GitHubActionsVersionLatest',      -- Highlight for latest versions
     highlight_outdated = 'GitHubActionsVersionOutdated',  -- Highlight for outdated versions
+    highlight_error = 'GitHubActionsVersionError',        -- Highlight for error
     highlight_icon_latest = 'GitHubActionsIconLatest',    -- Highlight for latest icon
     highlight_icon_outdated = 'GitHubActionsIconOutdated', -- Highlight for outdated icon
+    highlight_icon_error = 'GitHubActionsIconError',      -- Highlight for error icon
   },
 })
 ```
