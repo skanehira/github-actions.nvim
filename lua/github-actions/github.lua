@@ -39,7 +39,7 @@ end
 ---Fetch latest release for an action from GitHub
 ---@param owner string Repository owner (e.g., "actions")
 ---@param repo string Repository name (e.g., "checkout")
----@param callback function Callback function(version, error)
+---@param callback fun(version: string|nil, error: string|nil) Callback function with version string or error
 function M.fetch_latest_release(owner, repo, callback)
   if not M.is_available() then
     callback(nil, 'gh command not found')

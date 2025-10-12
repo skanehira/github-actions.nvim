@@ -31,7 +31,7 @@ end
 
 ---Check version information for a buffer (business logic only)
 ---@param bufnr number Buffer number
----@param callback function Callback function(version_infos, error)
+---@param callback fun(version_infos: VersionInfo[]|nil, error: string|nil) Callback function with version info results or error
 function M.check_versions(bufnr, callback)
   -- Validate buffer
   if not vim.api.nvim_buf_is_valid(bufnr) then
