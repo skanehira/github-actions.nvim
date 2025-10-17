@@ -25,18 +25,17 @@ function M.parse(version_str)
   return parts
 end
 
----Compare versions with appropriate depth
----Only compare the parts that are specified in current_version
+---Get version status by comparing current and latest versions
 ---@param current_version string|nil Current version (e.g., "v3", "v3.5", "v3.5.1")
 ---@param latest_version string|nil Latest available version
----@return boolean is_latest True if current is up-to-date
-function M.compare(current_version, latest_version)
+---@return string status "newer"|"latest"|"outdated"|"invalid"
+function M.get_version_status(current_version, latest_version)
   local curr_parts = M.parse(current_version)
   local latest_parts = M.parse(latest_version)
 
-  -- If parsing failed, consider it outdated
+  -- If parsing failed, return invalid
   if #curr_parts == 0 or #latest_parts == 0 then
-    return false
+    return 'invalid'
   end
 
   -- Compare only the depth of current version
@@ -44,18 +43,28 @@ function M.compare(current_version, latest_version)
   local depth = #curr_parts
 
   for i = 1, depth do
-    local curr = curr_parts[i] or 0 -- If current doesn't have this part, assume 0
+    local curr = curr_parts[i] or 0     -- If current doesn't have this part, assume 0
     local latest = latest_parts[i] or 0 -- If latest doesn't have this part, assume 0
 
     if curr < latest then
-      return false -- outdated
+      return 'outdated'
     elseif curr > latest then
-      return true -- somehow newer (edge case)
+      return 'newer'
     end
     -- Equal, continue to next part
   end
 
-  return true -- All compared parts are equal or newer
+  return 'latest' -- All compared parts are equal
+end
+
+---Compare versions with appropriate depth
+---Only compare the parts that are specified in current_version
+---@param current_version string|nil Current version (e.g., "v3", "v3.5", "v3.5.1")
+---@param latest_version string|nil Latest available version
+---@return boolean is_latest True if current is up-to-date
+function M.compare(current_version, latest_version)
+  local status = M.get_version_status(current_version, latest_version)
+  return status == 'latest' or status == 'newer'
 end
 
 return M

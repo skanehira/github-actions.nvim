@@ -283,4 +283,134 @@ describe('lib.semver', function()
       end)
     end
   end)
+
+  describe('get_version_status', function()
+    local test_cases = {
+      -- newer cases
+      {
+        name = 'should return "newer" when current major is newer',
+        current = 'v4.0.0',
+        latest = 'v3.9.9',
+        expected = 'newer',
+      },
+      {
+        name = 'should return "newer" when current minor is newer',
+        current = 'v3.6.0',
+        latest = 'v3.5.9',
+        expected = 'newer',
+      },
+      {
+        name = 'should return "newer" when current patch is newer',
+        current = 'v3.5.2',
+        latest = 'v3.5.1',
+        expected = 'newer',
+      },
+      {
+        name = 'should return "newer" for v4 vs v3.5.1',
+        current = 'v4',
+        latest = 'v3.5.1',
+        expected = 'newer',
+      },
+      {
+        name = 'should return "newer" for v3.6 vs v3.5.1',
+        current = 'v3.6',
+        latest = 'v3.5.1',
+        expected = 'newer',
+      },
+      -- latest cases
+      {
+        name = 'should return "latest" when versions are equal',
+        current = 'v3.5.1',
+        latest = 'v3.5.1',
+        expected = 'latest',
+      },
+      {
+        name = 'should return "latest" for v3 vs v3.0.0',
+        current = 'v3',
+        latest = 'v3.0.0',
+        expected = 'latest',
+      },
+      {
+        name = 'should return "latest" for v3.5 vs v3.5.0',
+        current = 'v3.5',
+        latest = 'v3.5.0',
+        expected = 'latest',
+      },
+      -- outdated cases
+      {
+        name = 'should return "outdated" when current major is older',
+        current = 'v3.0.0',
+        latest = 'v4.0.0',
+        expected = 'outdated',
+      },
+      {
+        name = 'should return "outdated" when current minor is older',
+        current = 'v3.4.0',
+        latest = 'v3.5.0',
+        expected = 'outdated',
+      },
+      {
+        name = 'should return "outdated" when current patch is older',
+        current = 'v3.5.0',
+        latest = 'v3.5.1',
+        expected = 'outdated',
+      },
+      {
+        name = 'should return "outdated" for v3 vs v4.0.0',
+        current = 'v3',
+        latest = 'v4.0.0',
+        expected = 'outdated',
+      },
+      -- invalid cases
+      {
+        name = 'should return "invalid" when current is nil',
+        current = nil,
+        latest = 'v3.5.1',
+        expected = 'invalid',
+      },
+      {
+        name = 'should return "invalid" when latest is nil',
+        current = 'v3.5.1',
+        latest = nil,
+        expected = 'invalid',
+      },
+      {
+        name = 'should return "invalid" when both are nil',
+        current = nil,
+        latest = nil,
+        expected = 'invalid',
+      },
+      {
+        name = 'should return "invalid" when current is empty',
+        current = '',
+        latest = 'v3.5.1',
+        expected = 'invalid',
+      },
+      {
+        name = 'should return "invalid" when latest is empty',
+        current = 'v3.5.1',
+        latest = '',
+        expected = 'invalid',
+      },
+      {
+        name = 'should return "invalid" when current is not a valid version',
+        current = 'invalid',
+        latest = 'v3.5.1',
+        expected = 'invalid',
+      },
+      {
+        name = 'should return "invalid" when latest is not a valid version',
+        current = 'v3.5.1',
+        latest = 'invalid',
+        expected = 'invalid',
+      },
+    }
+
+    for _, tc in ipairs(test_cases) do
+      it(tc.name, function()
+        local status = semver.get_version_status(tc.current, tc.latest)
+        assert.are.equal(tc.expected, status)
+      end)
+    end
+  end)
 end)

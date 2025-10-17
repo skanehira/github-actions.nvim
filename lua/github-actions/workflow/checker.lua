@@ -23,7 +23,17 @@ local function create_version_info(action, latest_version, error_msg)
   }
 
   if not error_msg and latest_version and action.version then
-    version_info.is_latest = semver.compare(action.version, latest_version)
+    local status = semver.get_version_status(action.version, latest_version)
+
+    if status == 'newer' then
+      -- Current version is newer than latest - treat as error
+      version_info.error = 'newer than latest'
+      version_info.is_latest = false
+    elseif status == 'latest' then
+      version_info.is_latest = true
+    else -- 'outdated' or 'invalid'
+      version_info.is_latest = false
+    end
   end
 
   return version_info
