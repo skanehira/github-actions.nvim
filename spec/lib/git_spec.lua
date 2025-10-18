@@ -53,18 +53,6 @@ origin/main
       assert.equals(0, #branches)
     end)
 
-    it('should remove duplicates', function()
-      local stdout = [[
-main
-main
-develop
-]]
-      local branches = git.parse_branches(stdout)
-
-      assert.equals(2, #branches)
-      assert.same({ 'main', 'develop' }, branches)
-    end)
-
     it('should trim whitespace', function()
       local stdout = [[
   main

@@ -1,19 +1,17 @@
 ---@class Git
 local M = {}
 
----Parse git branches from git command output and return unique local branches
+---Parse git branches from git command output and return local branches
 ---@param stdout string Output from git branch command
----@return string[] branches List of unique branch names
+---@return string[] branches List of branch names
 function M.parse_branches(stdout)
   local branches = {}
-  local seen = {}
 
   for branch in stdout:gmatch('[^\n]+') do
     -- Remove any whitespace
     branch = vim.trim(branch)
     -- Skip remote tracking branches (origin/*) and remote name itself (origin)
-    if branch ~= '' and not branch:match('^origin/?') and not seen[branch] then
-      seen[branch] = true
+    if branch ~= '' and not branch:match('^origin/?') then
       table.insert(branches, branch)
     end
   end
@@ -44,9 +42,13 @@ end
 ---@param cmd string[] Command to execute
 ---@return string stdout Command output
 ---@return number exit_code Exit code (0 for success)
+---@return string stderr Error output
 function M.execute_git_command(cmd)
   local stdout = vim.fn.system(cmd)
-  return stdout, vim.v.shell_error
+  local exit_code = vim.v.shell_error
+  -- vim.fn.system returns stderr in stdout when command fails
+  local stderr = exit_code ~= 0 and stdout or ''
+  return stdout, exit_code, stderr
 end
 
 ---Get available git branches
