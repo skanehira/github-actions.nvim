@@ -20,7 +20,8 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Setup nvim-treesitter
-        run: make install-parser
+        run:
+          git clone --depth 1 https://github.com/nvim-treesitter/nvim-treesitter deps/nvim-treesitter
 
       - name: Run tests
         uses: nvim-neorocks/nvim-busted-action@v1
