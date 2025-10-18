@@ -1,12 +1,13 @@
 # github-actions.nvim
 
-A Neovim plugin that checks GitHub Actions versions and displays them inline using extmarks.
+A Neovim plugin for managing GitHub Actions workflows directly from Neovim.
 
 <img width="923" height="534" alt="image" src="https://github.com/user-attachments/assets/47128a5b-f0d7-4f67-a226-238aa7e876a2" />
 
 ## Features
 
 - 📦 Check GitHub Actions versions automatically
+- 🚀 Dispatch workflows with `workflow_dispatch` trigger
 
 ## Requirements
 
@@ -63,4 +64,31 @@ require('github-actions').setup({
     highlight_icon_error = 'GitHubActionsIconError',      -- Highlight for error icon
   },
 })
+```
+
+## Commands
+
+- `:GithubActionsDispatch` - Dispatch the current workflow (only available in workflow files with `workflow_dispatch` trigger)
+
+## Keymaps
+
+You can set up keymaps to call the plugin's functions directly:
+
+```lua
+{
+  'skanehira/github-actions.nvim',
+  dependencies = {
+    'nvim-treesitter/nvim-treesitter',
+  },
+  keys = {
+    {
+      '<leader>gd',
+      function()
+        require('github-actions').dispatch_workflow()
+      end,
+      desc = 'Dispatch workflow',
+    },
+  },
+  opts = {},
+}
 ```

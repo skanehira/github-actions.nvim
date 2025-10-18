@@ -123,4 +123,38 @@ function M.fetch_latest_release(owner, repo, callback)
   end)
 end
 
+---@class WorkflowInput
+---@field name string Input parameter name
+---@field value string Input parameter value
+
+---Dispatch a workflow using gh CLI
+---@param workflow_file string Workflow filename (e.g., "ci.yml")
+---@param ref string Git ref to run the workflow on (branch, tag, or commit)
+---@param inputs WorkflowInput[] Array of workflow inputs
+---@param callback fun(success: boolean, error: string|nil) Callback function with success status and optional error
+function M.dispatch_workflow(workflow_file, ref, inputs, callback)
+  if not M.is_available() then
+    callback(false, 'gh command not found')
+    return
+  end
+
+  -- Build command: gh workflow run <workflow> --ref <ref> [-f key=value ...]
+  local cmd = { 'gh', 'workflow', 'run', workflow_file, '--ref', ref }
+
+  -- Add input parameters
+  for _, input in ipairs(inputs) do
+    table.insert(cmd, '-f')
+    table.insert(cmd, input.name .. '=' .. input.value)
+  end
+
+  vim.system(cmd, {}, function(result)
+    if result.code ~= 0 then
+      callback(false, 'gh workflow run failed: ' .. (result.stderr or 'unknown error'))
+      return
+    end
+
+    callback(true, nil)
+  end)
+end
+
 return M
