@@ -106,10 +106,10 @@ main
 feature/test
 origin/main
 origin/develop
-]], 0
+]], 0, ''
         else
           -- Second call: get default branch
-          return 'refs/remotes/origin/main\n', 0
+          return 'refs/remotes/origin/main\n', 0, ''
         end
       end)
 
@@ -127,7 +127,7 @@ origin/develop
       local stub = require('luassert.stub')
 
       stub(git, 'execute_git_command')
-      git.execute_git_command.returns('', 1)
+      git.execute_git_command.returns('', 1, 'error message')
 
       local branches = git.get_branches()
 
@@ -147,9 +147,9 @@ origin/develop
           return [[
 develop
 feature/test
-]], 0
+]], 0, ''
         else
-          return '', 1 -- Failed to get default branch
+          return '', 1, 'error' -- Failed to get default branch
         end
       end)
 
