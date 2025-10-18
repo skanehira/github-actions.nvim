@@ -43,9 +43,4 @@ if is_workflow then
   end, {
     desc = 'Dispatch the current workflow using gh CLI',
   })
-
-  -- Add keymap
-  vim.keymap.set('n', '<Plug>(github-actions-dispatch)', function()
-    github_actions.dispatch_workflow()
-  end, { buffer = bufnr, desc = 'Dispatch workflow' })
 end
