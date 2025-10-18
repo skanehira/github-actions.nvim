@@ -56,6 +56,62 @@ describe('workflow.input', function()
       assert.is_true(is_valid)
       assert.is_nil(error_message)
     end)
+
+    it('should accept valid boolean input (true)', function()
+      local input_def = { name = 'debug', type = 'boolean' }
+      local is_valid, error_message = input.validate_input(input_def, 'true')
+
+      assert.is_true(is_valid)
+      assert.is_nil(error_message)
+    end)
+
+    it('should accept valid boolean input (false)', function()
+      local input_def = { name = 'debug', type = 'boolean' }
+      local is_valid, error_message = input.validate_input(input_def, 'false')
+
+      assert.is_true(is_valid)
+      assert.is_nil(error_message)
+    end)
+
+    it('should accept valid boolean input (case insensitive)', function()
+      local input_def = { name = 'debug', type = 'boolean' }
+      local is_valid, error_message = input.validate_input(input_def, 'True')
+
+      assert.is_true(is_valid)
+      assert.is_nil(error_message)
+    end)
+
+    it('should reject invalid boolean input', function()
+      local input_def = { name = 'debug', type = 'boolean' }
+      local is_valid, error_message = input.validate_input(input_def, 'yes')
+
+      assert.is_false(is_valid)
+      assert.equals('Input "debug" must be "true" or "false"', error_message)
+    end)
+
+    it('should accept valid choice input', function()
+      local input_def = { name = 'environment', type = 'choice', options = { 'dev', 'staging', 'prod' } }
+      local is_valid, error_message = input.validate_input(input_def, 'staging')
+
+      assert.is_true(is_valid)
+      assert.is_nil(error_message)
+    end)
+
+    it('should reject invalid choice input', function()
+      local input_def = { name = 'environment', type = 'choice', options = { 'dev', 'staging', 'prod' } }
+      local is_valid, error_message = input.validate_input(input_def, 'production')
+
+      assert.is_false(is_valid)
+      assert.equals('Input "environment" must be one of: dev, staging, prod', error_message)
+    end)
+
+    it('should accept any value when choice has no options', function()
+      local input_def = { name = 'environment', type = 'choice', options = {} }
+      local is_valid, error_message = input.validate_input(input_def, 'anything')
+
+      assert.is_true(is_valid)
+      assert.is_nil(error_message)
+    end)
   end)
 
   describe('collect_inputs', function()
@@ -236,6 +292,111 @@ describe('workflow.input', function()
 
       assert.is_true(error_called)
       assert.equals('Input "version" is required', result_error)
+    end)
+
+    it('should stop collecting when user cancels vim.ui.input (required)', function()
+      local stub = require('luassert.stub')
+      local inputs = {
+        { name = 'version', description = 'Version', required = true },
+        { name = 'tag', description = 'Tag', required = false },
+      }
+
+      local success_called = false
+      local error_called = false
+
+      -- Stub vim.ui.input
+      stub(vim.ui, 'input')
+      vim.ui.input.invokes(function(_, on_confirm)
+        on_confirm(nil) -- User cancelled (ESC)
+      end)
+
+      input.collect_inputs(inputs, {
+        on_success = function(_)
+          success_called = true
+        end,
+        on_error = function(_)
+          error_called = true
+        end,
+      })
+
+      -- Wait for vim.schedule
+      vim.wait(100)
+
+      assert.is_false(success_called)
+      assert.is_false(error_called)
+      assert.stub(vim.ui.input).was_called(1) -- Should only call once before cancellation
+    end)
+
+    it('should stop collecting when user cancels vim.ui.input (optional)', function()
+      local stub = require('luassert.stub')
+      local inputs = {
+        { name = 'version', description = 'Version', required = true },
+        { name = 'tag', description = 'Tag', required = false },
+      }
+
+      local success_called = false
+      local error_called = false
+      local call_count = 0
+
+      -- Stub vim.ui.input
+      stub(vim.ui, 'input')
+      vim.ui.input.invokes(function(_, on_confirm)
+        call_count = call_count + 1
+        if call_count == 1 then
+          on_confirm('1.0.0') -- First input provided
+        else
+          on_confirm(nil) -- User cancelled second input
+        end
+      end)
+
+      input.collect_inputs(inputs, {
+        on_success = function(_)
+          success_called = true
+        end,
+        on_error = function(_)
+          error_called = true
+        end,
+      })
+
+      -- Wait for vim.schedule
+      vim.wait(100)
+
+      assert.is_false(success_called)
+      assert.is_false(error_called)
+      assert.stub(vim.ui.input).was_called(2) -- Should call twice before cancellation
+    end)
+
+    it('should stop collecting when user cancels vim.ui.select', function()
+      local stub = require('luassert.stub')
+      local inputs = {
+        { name = 'environment', type = 'choice', options = { 'dev', 'staging', 'prod' }, required = false },
+        { name = 'version', description = 'Version', required = true },
+      }
+
+      local success_called = false
+      local error_called = false
+
+      -- Stub vim.ui.select
+      stub(vim.ui, 'select')
+      vim.ui.select.invokes(function(_, _, on_confirm)
+        on_confirm(nil) -- User cancelled (ESC)
+      end)
+
+      input.collect_inputs(inputs, {
+        on_success = function(_)
+          success_called = true
+        end,
+        on_error = function(_)
+          error_called = true
+        end,
+      })
+
+      -- Wait for vim.schedule
+      vim.wait(100)
+
+      assert.is_false(success_called)
+      assert.is_false(error_called)
+      assert.stub(vim.ui.select).was_called(1) -- Should only call once before cancellation
     end)
   end)
 end)
