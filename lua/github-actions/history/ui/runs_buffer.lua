@@ -88,6 +88,62 @@ local function get_run_at_cursor(bufnr)
   return nil
 end
 
+---Get step at cursor position
+---@param bufnr number Buffer number
+---@return number|nil run_idx Run index (1-based)
+---@return number|nil job_idx Job index (1-based)
+---@return number|nil step_idx Step index (1-based)
+local function get_step_at_cursor(bufnr)
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local line_idx = cursor[1] - 1
+
+  -- Skip header (line 0 and 1) and separator (line 2)
+  if line_idx < 3 then
+    return nil, nil, nil
+  end
+
+  local data = buffer_data[bufnr]
+  if not data or not data.runs then
+    return nil, nil, nil
+  end
+
+  local current_line = 3 -- Start after header and separator
+
+  for run_idx, run in ipairs(data.runs) do
+    if line_idx == current_line then
+      -- Cursor is on run line
+      return nil, nil, nil
+    end
+
+    current_line = current_line + 1
+
+    -- Check expanded lines for this run
+    if run.expanded and run.jobs then
+      for job_idx, job in ipairs(run.jobs) do
+        if line_idx == current_line then
+          -- Cursor is on job line
+          return nil, nil, nil
+        end
+
+        current_line = current_line + 1
+
+        if job.steps then
+          for step_idx, _ in ipairs(job.steps) do
+            if line_idx == current_line then
+              -- Cursor is on step line
+              return run_idx, job_idx, step_idx
+            end
+
+            current_line = current_line + 1
+          end
+        end
+      end
+    end
+  end
+
+  return nil, nil, nil
+end
+
 ---Show loading indicator on current line using virtual text
 ---@param bufnr number Buffer number
 ---@return number line_idx Line index where loading indicator was added
@@ -117,9 +173,69 @@ local function clear_loading_indicator(bufnr)
   vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
 end
 
----Toggle expand/collapse for run at cursor
+---View logs for a step
+---@param bufnr number Buffer number
+---@param run_idx number Run index
+---@param job_idx number Job index
+---@param step_idx number Step index
+local function view_step_logs(bufnr, run_idx, job_idx, step_idx)
+  local data = buffer_data[bufnr]
+  if not data or not data.runs then
+    return
+  end
+
+  local run = data.runs[run_idx]
+  if not run or not run.jobs then
+    return
+  end
+
+  local job = run.jobs[job_idx]
+  if not job or not job.steps then
+    return
+  end
+
+  local step = job.steps[step_idx]
+  if not step then
+    return
+  end
+
+  -- Create log buffer
+  local logs_buffer = require('github-actions.history.ui.logs_buffer')
+  local log_parser = require('github-actions.history.log_parser')
+  local title = string.format('%s / %s', job.name, step.name)
+  local log_bufnr, _ = logs_buffer.create_buffer(title, run.databaseId)
+
+  -- Show loading indicator in log buffer
+  logs_buffer.render(log_bufnr, 'Loading logs...')
+
+  -- Fetch logs
+  history.fetch_logs(run.databaseId, job.databaseId, function(logs, err)
+    vim.schedule(function()
+      if err then
+        logs_buffer.render(log_bufnr, 'Failed to fetch logs: ' .. err)
+        vim.notify('Failed to fetch logs: ' .. err, vim.log.levels.ERROR)
+        return
+      end
+
+      -- Parse and format logs, removing ANSI escape sequences
+      local formatted_logs = log_parser.parse(logs or '')
+      logs_buffer.render(log_bufnr, formatted_logs or 'No logs available')
+    end)
+  end)
+end
+
+---Toggle expand/collapse for run at cursor, or view logs for step
 ---@param bufnr number Buffer number
 local function toggle_expand(bufnr)
+  -- First, check if cursor is on a step
+  local step_run_idx, job_idx, step_idx = get_step_at_cursor(bufnr)
+  if step_run_idx and job_idx and step_idx then
+    -- Cursor is on a step, view logs
+    view_step_logs(bufnr, step_run_idx, job_idx, step_idx)
+    return
+  end
+
+  -- Not on a step, check if on a run
   local run_idx = get_run_at_cursor(bufnr)
   if not run_idx then
     return
@@ -480,7 +596,7 @@ function M.render(bufnr, runs, custom_icons, custom_highlights)
   end
 
   table.insert(lines, '')
-  table.insert(lines, 'Press <CR> to expand/collapse, <BS> to collapse, q to close')
+  table.insert(lines, 'Press <CR> to expand/view logs, <BS> to collapse, q to close')
 
   -- Set buffer lines
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
