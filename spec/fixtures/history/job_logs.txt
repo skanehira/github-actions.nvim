@@ -1,0 +1,20 @@
+test (ubuntu-latest, stable)	Set up job	2025-10-18T04:09:32.3975987Z Current runner version: '2.329.0'
+test (ubuntu-latest, stable)	Set up job	2025-10-18T04:09:32.4000692Z ##[group]Runner Image Provisioner
+test (ubuntu-latest, stable)	Set up job	2025-10-18T04:09:32.4001451Z Hosted Compute Agent
+test (ubuntu-latest, stable)	Set up job	2025-10-18T04:09:32.4002163Z ##[endgroup]
+test (ubuntu-latest, stable)	Set up job	2025-10-18T04:09:32.4193458Z ##[group]Operating System
+test (ubuntu-latest, stable)	Set up job	2025-10-18T04:09:32.4194271Z Ubuntu 22.04.5 LTS
+test (ubuntu-latest, stable)	Set up job	2025-10-18T04:09:32.4195038Z 22.04.202411190
+test (ubuntu-latest, stable)	Set up job	2025-10-18T04:09:32.4195796Z ##[endgroup]
+test (ubuntu-latest, stable)	Run tests	2025-10-18T04:09:37.1234567Z ##[group]Run npm test
+test (ubuntu-latest, stable)	Run tests	2025-10-18T04:09:37.2345678Z npm test
+test (ubuntu-latest, stable)	Run tests	2025-10-18T04:09:37.3456789Z ##[endgroup]
+test (ubuntu-latest, stable)	Run tests	2025-10-18T04:09:38.4567890Z
+test (ubuntu-latest, stable)	Run tests	2025-10-18T04:09:38.5678901Z > test
+test (ubuntu-latest, stable)	Run tests	2025-10-18T04:09:38.6789012Z > jest
+test (ubuntu-latest, stable)	Run tests	2025-10-18T04:09:38.7890123Z
+test (ubuntu-latest, stable)	Run tests	2025-10-18T04:09:40.8901234Z PASS spec/example_spec.js
+test (ubuntu-latest, stable)	Run tests	2025-10-18T04:09:40.9012345Z   ✓ should work (5ms)
+test (ubuntu-latest, stable)	Run tests	2025-10-18T04:09:41.0123456Z
+test (ubuntu-latest, stable)	Run tests	2025-10-18T04:09:41.1234567Z Test Suites: 1 passed, 1 total
+test (ubuntu-latest, stable)	Run tests	2025-10-18T04:09:41.2345678Z Tests:       1 passed, 1 total
