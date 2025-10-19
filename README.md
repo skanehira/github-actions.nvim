@@ -104,6 +104,15 @@ require('github-actions').setup({
 - `:GithubActionsDispatch` - Dispatch the current workflow (only available in workflow files with `workflow_dispatch` trigger)
 - `:GithubActionsHistory` - Show workflow run history for the current workflow file
 
+### Workflow History Usage
+
+1. Press `<CR>` on a workflow run to expand/collapse jobs and steps
+2. Press `<CR>` on a step to view its logs in a new buffer
+3. Press `<BS>` to collapse an expanded run
+4. Press `q` to close the history or log buffer
+
+**Log Display**: Logs are automatically formatted to show only timestamps and content, removing redundant job and step name columns for better readability. Format: `[HH:MM:SS] log content`
+
 ## Keymaps
 
 You can set up keymaps to call the plugin's functions directly:
