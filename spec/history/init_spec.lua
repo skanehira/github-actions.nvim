@@ -107,6 +107,7 @@ jobs:
 
       -- Verify error was shown
       assert.stub(notify_stub).was_called()
+      ---@diagnostic disable-next-line: param-type-mismatch
       assert.stub(notify_stub).was_called_with(match.matches('workflow file'), vim.log.levels.ERROR)
 
       notify_stub:revert()
@@ -131,6 +132,7 @@ jobs:
 
       -- Verify error was shown
       assert.stub(notify_stub).was_called()
+      ---@diagnostic disable-next-line: param-type-mismatch
       assert.stub(notify_stub).was_called_with(match.matches('workflow name'), vim.log.levels.ERROR)
 
       notify_stub:revert()
@@ -167,6 +169,7 @@ on: push
 
       -- Verify error was shown
       assert.stub(notify_stub).was_called()
+      ---@diagnostic disable-next-line: param-type-mismatch
       assert.stub(notify_stub).was_called_with(match.matches('gh:'), vim.log.levels.ERROR)
 
       system_stub:revert()

@@ -15,7 +15,8 @@ local function get_timezone_offset()
   -- Get current time
   local now = os.time()
   -- Get UTC time components
-  local utc_date = os.date('!*t', now)
+  ---@type osdate
+  local utc_date = os.date('!*t', now) --[[@as osdate]]
   -- Convert UTC components back to timestamp (will be interpreted as local time)
   local utc_as_local = os.time(utc_date)
   -- The difference is the timezone offset
