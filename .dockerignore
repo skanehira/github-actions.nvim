@@ -1,0 +1,35 @@
+# Git
+.git
+.gitignore
+
+# Neovim
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Luarocks (exclude host machine config)
+lua_modules/
+.luarocks/
+*.rock
+/luarocks
+
+# Test dependencies (will be installed in container)
+deps/
+
+# Documentation
+/doc/tags
+
+# Logs
+*.log
+
+# Docker
+Dockerfile
+.dockerignore
+
+# CI/CD
+.github/
+
+# README and docs (not needed for runtime)
+*.md
+!CLAUDE.md
