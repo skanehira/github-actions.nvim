@@ -1,6 +1,11 @@
 local formatter = require('github-actions.history.ui.formatter')
+local history = require('github-actions.workflow.history')
 
 local M = {}
+
+-- Store buffer-specific data
+-- bufnr -> { runs = {...}, custom_icons = {...}, custom_highlights = {...} }
+local buffer_data = {}
 
 ---Create a new buffer for displaying workflow run history
 ---@param workflow_file string Workflow file name (e.g., "ci.yml")
@@ -28,7 +33,103 @@ function M.create_buffer(workflow_file)
   -- Set up keymaps
   M.setup_keymaps(bufnr)
 
+  -- Clean up buffer data when buffer is deleted
+  vim.api.nvim_create_autocmd('BufDelete', {
+    buffer = bufnr,
+    callback = function()
+      buffer_data[bufnr] = nil
+    end,
+  })
+
   return bufnr, winnr
+end
+
+---Get run index from cursor line
+---@param bufnr number Buffer number
+---@return number|nil run_idx Run index (1-based) or nil if not on a run line
+local function get_run_at_cursor(bufnr)
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local line_idx = cursor[1] - 1 -- Convert to 0-based
+
+  -- Header is line 0, separator is line 1, empty line is 2
+  -- Runs start at line 3
+  if line_idx < 3 then
+    return nil
+  end
+
+  local data = buffer_data[bufnr]
+  if not data or not data.runs then
+    return nil
+  end
+
+  -- Get all lines to count expanded lines
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+
+  -- Find which run this line belongs to
+  local current_line = 3 -- First run starts at line 3 (0-based)
+  for run_idx, run in ipairs(data.runs) do
+    if line_idx == current_line then
+      return run_idx
+    end
+
+    current_line = current_line + 1
+
+    -- Count expanded lines for this run
+    if run.expanded and run.jobs then
+      for _, job in ipairs(run.jobs) do
+        current_line = current_line + 1
+        if job.steps then
+          current_line = current_line + #job.steps
+        end
+      end
+    end
+  end
+
+  return nil
+end
+
+---Toggle expand/collapse for run at cursor
+---@param bufnr number Buffer number
+local function toggle_expand(bufnr)
+  local run_idx = get_run_at_cursor(bufnr)
+  if not run_idx then
+    return
+  end
+
+  local data = buffer_data[bufnr]
+  if not data or not data.runs then
+    return
+  end
+
+  local run = data.runs[run_idx]
+
+  -- If already expanded, collapse it
+  if run.expanded then
+    run.expanded = false
+    M.render(bufnr, data.runs, data.custom_icons, data.custom_highlights)
+    return
+  end
+
+  -- If not expanded, fetch jobs and expand
+  if run.jobs then
+    -- Jobs already fetched, just expand
+    run.expanded = true
+    M.render(bufnr, data.runs, data.custom_icons, data.custom_highlights)
+  else
+    -- Need to fetch jobs first
+    history.fetch_jobs(run.databaseId, function(jobs_response, err)
+      if err then
+        vim.notify('Failed to fetch jobs: ' .. err, vim.log.levels.ERROR)
+        return
+      end
+
+      if jobs_response and jobs_response.jobs then
+        run.jobs = jobs_response.jobs
+        run.expanded = true
+        M.render(bufnr, data.runs, data.custom_icons, data.custom_highlights)
+      end
+    end)
+  end
 end
 
 ---Set up keymaps for the buffer
@@ -39,6 +140,30 @@ function M.setup_keymaps(bufnr)
   -- Close buffer with 'q'
   vim.keymap.set('n', 'q', function()
     vim.api.nvim_buf_delete(bufnr, { force = true })
+  end, opts)
+
+  -- Toggle expand/collapse with <CR>
+  vim.keymap.set('n', '<CR>', function()
+    toggle_expand(bufnr)
+  end, opts)
+
+  -- Collapse with <BS>
+  vim.keymap.set('n', '<BS>', function()
+    local run_idx = get_run_at_cursor(bufnr)
+    if not run_idx then
+      return
+    end
+
+    local data = buffer_data[bufnr]
+    if not data or not data.runs then
+      return
+    end
+
+    local run = data.runs[run_idx]
+    if run.expanded then
+      run.expanded = false
+      M.render(bufnr, data.runs, data.custom_icons, data.custom_highlights)
+    end
   end, opts)
 end
 
@@ -149,6 +274,13 @@ end
 ---@param custom_icons? HistoryIcons Custom icon configuration
 ---@param custom_highlights? HistoryHighlights Custom highlight configuration
 function M.render(bufnr, runs, custom_icons, custom_highlights)
+  -- Store buffer data for keymap handlers
+  buffer_data[bufnr] = {
+    runs = runs,
+    custom_icons = custom_icons,
+    custom_highlights = custom_highlights,
+  }
+
   -- Make buffer modifiable temporarily
   vim.bo[bufnr].modifiable = true
 
@@ -189,7 +321,7 @@ function M.render(bufnr, runs, custom_icons, custom_highlights)
   end
 
   table.insert(lines, '')
-  table.insert(lines, 'Press q to close')
+  table.insert(lines, 'Press <CR> to expand/collapse, <BS> to collapse, q to close')
 
   -- Set buffer lines
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
