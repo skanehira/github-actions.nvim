@@ -97,7 +97,7 @@ Press q to close
 
 ## User Flow
 
-1. **Trigger**: User opens a workflow file and runs `:GhActionsHistory` (or custom keymap)
+1. **Trigger**: User opens a workflow file and runs `:GithubActionsHistory` (or custom keymap)
 2. **Fetch**: Plugin retrieves the 10 most recent workflow runs via `gh` CLI
 3. **Display**: New buffer shows run list with status, branch, title, time, and duration
 4. **Expand**: User presses `<CR>` on a run to expand jobs and steps inline
@@ -115,35 +115,61 @@ gh run list \
   --json databaseId,displayTitle,headBranch,conclusion,status,createdAt,updatedAt
 ```
 
+**Note**: `databaseId` is the workflow run ID used in subsequent commands.
+
+Example response:
+```json
+[
+  {
+    "conclusion": "success",
+    "createdAt": "2025-10-18T04:09:29Z",
+    "databaseId": 18610558363,
+    "displayTitle": "chore: improve test (#2)",
+    "headBranch": "main",
+    "status": "completed",
+    "updatedAt": "2025-10-18T04:10:30Z"
+  }
+]
+```
+
 ### 2. Fetch Jobs and Steps for a Run
 
 ```bash
 gh run view <run-id> --json jobs
 ```
 
-Response structure:
+**Note**: `<run-id>` is the `databaseId` from the run list response.
+
+Example response:
 ```json
 {
   "jobs": [
     {
-      "databaseId": 123456,
-      "name": "build",
-      "conclusion": "failure",
+      "completedAt": "2025-10-18T04:10:16Z",
+      "conclusion": "success",
+      "databaseId": 53068027249,
+      "name": "test (ubuntu-latest, stable)",
+      "startedAt": "2025-10-18T04:09:31Z",
       "status": "completed",
       "steps": [
         {
-          "name": "Setup job",
+          "completedAt": "2025-10-18T04:09:36Z",
           "conclusion": "success",
-          "status": "completed",
-          "number": 1
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2025-10-18T04:09:32Z",
+          "status": "completed"
         },
         {
+          "completedAt": "2025-10-18T04:10:14Z",
+          "conclusion": "success",
           "name": "Run tests",
-          "conclusion": "failure",
-          "status": "completed",
-          "number": 3
+          "number": 4,
+          "startedAt": "2025-10-18T04:09:37Z",
+          "status": "completed"
         }
-      ]
+      ],
+      "url": "https://github.com/owner/repo/actions/runs/18610558363/job/53068027249"
     }
   ]
 }
@@ -155,9 +181,16 @@ Response structure:
 gh run view <run-id> --log --job=<job-id>
 ```
 
-Or via API:
-```bash
-gh api /repos/{owner}/{repo}/actions/jobs/{job-id}/logs
+**Note**:
+- `<run-id>` is the workflow run's `databaseId`
+- `<job-id>` is the job's `databaseId` from the jobs response
+
+Example output format:
+```
+test (ubuntu-latest, stable)	UNKNOWN STEP	2025-10-18T04:09:32.3975987Z Current runner version: '2.329.0'
+test (ubuntu-latest, stable)	UNKNOWN STEP	2025-10-18T04:09:32.4000692Z ##[group]Runner Image Provisioner
+test (ubuntu-latest, stable)	UNKNOWN STEP	2025-10-18T04:09:32.4001451Z Hosted Compute Agent
+...
 ```
 
 ## Architecture
@@ -213,9 +246,9 @@ lua/github-actions/
 - Format duration ("3m 24s")
 
 #### `workflow/detector.lua`
-- Check if current buffer is a workflow file
-- Extract workflow filename from buffer path
-- Get repository information (owner, repo)
+- Check if current buffer is a workflow file (`.github/workflows/*.yml`)
+- Extract workflow name from YAML content (the `name:` field, not filename)
+- Example: For a file with `name: CI`, return "CI" (not "ci.yaml")
 
 #### `lib/time.lua`
 - `format_relative(iso_timestamp)`: "2h ago", "3d ago"
@@ -243,10 +276,13 @@ lua/github-actions/
 
 ```lua
 ---@class Job
----@field id number Job ID
+---@field id number Job ID (databaseId from API)
 ---@field name string Job name
 ---@field conclusion string|nil "success"|"failure"|"skipped"|nil
 ---@field status string "completed"|"in_progress"|"queued"
+---@field started_at string|nil ISO 8601 timestamp when job started
+---@field completed_at string|nil ISO 8601 timestamp when job completed
+---@field url string URL to the job on GitHub
 ---@field steps Step[] List of steps in this job
 ```
 
@@ -257,15 +293,15 @@ lua/github-actions/
 ---@field name string Step name
 ---@field conclusion string|nil "success"|"failure"|"skipped"|nil
 ---@field status string "completed"|"in_progress"|"queued"
----@field number number Step number
----@field started_at string|nil Start timestamp
----@field completed_at string|nil Completion timestamp
+---@field number number Step number (used to identify step within job)
+---@field started_at string|nil ISO 8601 timestamp when step started
+---@field completed_at string|nil ISO 8601 timestamp when step completed
 ```
 
 ## Data Flow
 
 ```
-User triggers :GhActionsHistory
+User triggers :GithubActionsHistory
          ↓
 workflow/detector.lua → Extract workflow filename
          ↓
@@ -326,42 +362,185 @@ spec/
 │   ├── ui/
 │   │   ├── formatter_spec.lua # Test display string formatting
 │   │   └── runs_buffer_spec.lua # Test buffer creation/updates
-│   └── detector_spec.lua      # Test workflow file detection
+│   └── detector_spec.lua      # Test workflow file detection and name extraction
+├── workflow/
+│   └── detector_spec.lua      # Test is_workflow_file() and get_workflow_name()
 ├── lib/
 │   └── time_spec.lua          # Test time formatting utilities
 └── fixtures/
     └── history/
         ├── runs_list.json     # Sample gh run list response
         ├── run_jobs.json      # Sample gh run view response
-        └── job_logs.txt       # Sample log output
+        ├── job_logs.txt       # Sample log output
+        └── workflow_files/    # Sample workflow YAML files for detector tests
+            ├── ci.yml         # Example: name: CI
+            ├── test.yml       # Example: name: Test
+            └── no_name.yml    # Example: workflow without name field
 ```
 
 ## Implementation Phases
 
+**IMPORTANT**: Follow TDD (Test-Driven Development) methodology for ALL phases:
+1. **RED**: Write a failing test first
+2. **GREEN**: Write minimal code to pass the test
+3. **REFACTOR**: Improve code quality while keeping tests green
+
 ### Phase 1: Basic Run List Display
-- Implement workflow detection
-- Implement run list fetching
-- Create basic buffer display
-- Add basic keymaps (q to close)
+
+#### 1.1 Workflow Detection (TDD)
+- **RED**: Write test for detecting `.github/workflows/*.yml` files
+- **GREEN**: Implement `workflow/detector.lua` is_workflow_file() to pass the test
+- **REFACTOR**: Extract reusable logic if needed
+- **RED**: Write test for extracting workflow name from YAML content (`name: CI` → "CI")
+- **GREEN**: Implement get_workflow_name() to parse YAML and extract name field
+- **REFACTOR**: Handle edge cases (missing name field, comments, quoted values)
+
+#### 1.2 Run List Fetching (TDD)
+- **RED**: Write test for `fetch_runs()` with fixture data
+- **GREEN**: Implement `history/fetcher.lua` fetch_runs() method
+- **REFACTOR**: Extract gh CLI wrapper if needed
+- **RED**: Write test for parsing run list JSON response
+- **GREEN**: Implement JSON parsing and Run object creation
+- **REFACTOR**: Optimize parsing logic
+
+#### 1.3 Time Formatting (TDD)
+- **RED**: Write test for `format_relative()` ("2h ago", "1d ago")
+- **GREEN**: Implement `lib/time.lua` format_relative()
+- **REFACTOR**: Handle edge cases
+- **RED**: Write test for `format_duration()` ("3m 24s")
+- **GREEN**: Implement format_duration()
+- **REFACTOR**: Simplify duration logic
+
+#### 1.4 Run List Formatting (TDD)
+- **RED**: Write test for formatting single run display string
+- **GREEN**: Implement `history/ui/formatter.lua` format_run()
+- **REFACTOR**: Extract icon selection logic
+- **RED**: Write test for status icon selection
+- **GREEN**: Implement status-to-icon mapping
+- **REFACTOR**: Clean up formatter
+
+#### 1.5 Buffer Display (TDD)
+- **RED**: Write test for creating history buffer
+- **GREEN**: Implement `history/ui/runs_buffer.lua` create_buffer()
+- **REFACTOR**: Extract buffer options setup
+- **RED**: Write test for rendering run list in buffer
+- **GREEN**: Implement render() method
+- **REFACTOR**: Optimize rendering
+- **RED**: Write test for 'q' keymap (close buffer)
+- **GREEN**: Implement keymap setup
+- **REFACTOR**: Extract keymap configuration
+
+#### 1.6 Integration (TDD)
+- **RED**: Write integration test for full workflow (detect → fetch → display)
+- **GREEN**: Implement `history/init.lua` show_history()
+- **REFACTOR**: Improve error handling and user feedback
 
 ### Phase 2: Expand/Collapse Jobs
-- Implement job fetching
-- Add expand/collapse functionality
-- Update buffer rendering for jobs/steps
+
+#### 2.1 Job Fetching (TDD)
+- **RED**: Write test for `fetch_jobs()` with fixture data
+- **GREEN**: Implement fetch_jobs() in fetcher.lua
+- **REFACTOR**: Reuse gh CLI wrapper
+- **RED**: Write test for parsing jobs JSON response
+- **GREEN**: Implement Job and Step object creation
+- **REFACTOR**: Extract parsing logic
+
+#### 2.2 Job/Step Formatting (TDD)
+- **RED**: Write test for formatting job display string
+- **GREEN**: Implement format_job() in formatter.lua
+- **REFACTOR**: Handle indentation and tree structure
+- **RED**: Write test for formatting step display string
+- **GREEN**: Implement format_step()
+- **REFACTOR**: Add duration formatting for steps
+
+#### 2.3 Expand/Collapse Logic (TDD)
+- **RED**: Write test for tracking expand state
+- **GREEN**: Implement expand state management in runs_buffer.lua
+- **REFACTOR**: Optimize state storage
+- **RED**: Write test for <CR> keymap (expand run)
+- **GREEN**: Implement expand functionality
+- **REFACTOR**: Extract expand/collapse logic
+- **RED**: Write test for <BS> keymap (collapse run)
+- **GREEN**: Implement collapse functionality
+- **REFACTOR**: Clean up keymap handlers
+
+#### 2.4 Inline Rendering (TDD)
+- **RED**: Write test for rendering expanded jobs/steps
+- **GREEN**: Implement inline rendering in runs_buffer.lua
+- **REFACTOR**: Optimize buffer update logic
+- **RED**: Write test for cursor positioning after expand/collapse
+- **GREEN**: Implement cursor management
+- **REFACTOR**: Improve UX
 
 ### Phase 3: Log Viewing
-- Implement log fetching
-- Create log buffer display
-- Add navigation between buffers
+
+#### 3.1 Log Fetching (TDD)
+- **RED**: Write test for `fetch_logs()` with fixture data
+- **GREEN**: Implement fetch_logs() in fetcher.lua
+- **REFACTOR**: Handle async properly
+- **RED**: Write test for log parsing/formatting
+- **GREEN**: Implement log text processing
+- **REFACTOR**: Handle special log formats (##[group], etc.)
+
+#### 3.2 Log Buffer Display (TDD)
+- **RED**: Write test for creating log buffer
+- **GREEN**: Implement `history/ui/logs_buffer.lua` create_buffer()
+- **REFACTOR**: Set up proper buffer options
+- **RED**: Write test for rendering logs with syntax highlighting
+- **GREEN**: Implement render() with highlights
+- **REFACTOR**: Extract highlight configuration
+- **RED**: Write test for 'q' keymap (close log buffer)
+- **GREEN**: Implement close functionality
+- **REFACTOR**: Clean up
+
+#### 3.3 Navigation (TDD)
+- **RED**: Write test for <CR> on step (open logs)
+- **GREEN**: Implement step log navigation in runs_buffer.lua
+- **REFACTOR**: Extract navigation logic
+- **RED**: Write integration test for runs → logs flow
+- **GREEN**: Ensure proper buffer switching
+- **REFACTOR**: Improve navigation UX
 
 ### Phase 4: Polish
-- Add refresh functionality
-- Improve error handling
-- Add loading indicators
-- Optimize performance
+
+#### 4.1 Refresh Functionality (TDD)
+- **RED**: Write test for 'r' keymap (refresh)
+- **GREEN**: Implement refresh in runs_buffer.lua
+- **REFACTOR**: Handle loading state
+- **RED**: Write test for preserving cursor position on refresh
+- **GREEN**: Implement cursor restoration
+- **REFACTOR**: Optimize refresh
+
+#### 4.2 Error Handling (TDD)
+- **RED**: Write test for gh CLI errors
+- **GREEN**: Implement error handling in fetcher.lua
+- **REFACTOR**: Provide user-friendly error messages
+- **RED**: Write test for network timeout
+- **GREEN**: Implement timeout handling
+- **REFACTOR**: Add retry logic if needed
+
+#### 4.3 Loading Indicators (TDD)
+- **RED**: Write test for showing loading state
+- **GREEN**: Implement loading indicator in runs_buffer.lua
+- **REFACTOR**: Use virtual text or status line
+- **RED**: Write test for clearing loading state
+- **GREEN**: Implement clear logic
+- **REFACTOR**: Improve visual feedback
+
+#### 4.4 Performance (TDD)
+- **RED**: Write performance test for large run lists
+- **GREEN**: Optimize rendering for many runs
+- **REFACTOR**: Add lazy loading if needed
+- **RED**: Write test for async operations
+- **GREEN**: Ensure non-blocking UI
+- **REFACTOR**: Optimize async flow
 
 ### Phase 5: Future Enhancements
-- Pagination support
-- Filtering capabilities
-- Caching improvements
-- Additional features (re-run, cancel, etc.)
+
+Follow the same TDD approach for:
+- Pagination support (test → implement → refactor)
+- Filtering capabilities (test → implement → refactor)
+- Caching improvements (test → implement → refactor)
+- Additional features like re-run, cancel, etc. (test → implement → refactor)
+
+**Remember**: NEVER write production code without a failing test first!
