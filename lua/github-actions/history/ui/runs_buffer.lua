@@ -142,7 +142,8 @@ end
 ---Render run list in the buffer
 ---@param bufnr number Buffer number
 ---@param runs table[] List of run objects
-function M.render(bufnr, runs)
+---@param custom_icons? HistoryIcons Custom icon configuration
+function M.render(bufnr, runs, custom_icons)
   -- Make buffer modifiable temporarily
   vim.bo[bufnr].modifiable = true
 
@@ -163,7 +164,7 @@ function M.render(bufnr, runs)
   else
     -- Add each run
     for _, run in ipairs(runs) do
-      table.insert(lines, formatter.format_run(run))
+      table.insert(lines, formatter.format_run(run, nil, custom_icons))
     end
   end
 

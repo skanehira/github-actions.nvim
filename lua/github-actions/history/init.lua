@@ -35,7 +35,8 @@ end
 
 ---Show workflow run history for the current buffer
 ---@param bufnr number|nil Buffer number (defaults to current buffer)
-function M.show_history(bufnr)
+---@param custom_icons? HistoryIcons Custom icon configuration
+function M.show_history(bufnr, custom_icons)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
 
   -- Validate workflow buffer
@@ -65,7 +66,7 @@ function M.show_history(bufnr)
     end
 
     local hist_bufnr, _ = runs_buffer.create_buffer(workflow_file)
-    runs_buffer.render(hist_bufnr, runs)
+    runs_buffer.render(hist_bufnr, runs, custom_icons)
   end)
 end
 

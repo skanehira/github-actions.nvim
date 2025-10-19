@@ -46,7 +46,9 @@ if is_workflow then
 
   vim.api.nvim_buf_create_user_command(bufnr, 'GithubActionsHistory', function()
     local history = require('github-actions.history.init')
-    history.show_history(bufnr)
+    local config = github_actions.get_config()
+    local icons = config.history and config.history.icons or nil
+    history.show_history(bufnr, icons)
   end, {
     desc = 'Show workflow run history for current buffer',
   })

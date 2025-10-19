@@ -4,22 +4,80 @@ describe('history.ui.formatter', function()
   local formatter = require('github-actions.history.ui.formatter')
 
   describe('get_status_icon', function()
-    local test_cases = {
-      { status = 'completed', conclusion = 'success', expected = '✓' },
-      { status = 'completed', conclusion = 'failure', expected = '✗' },
-      { status = 'completed', conclusion = 'cancelled', expected = '⊘' },
-      { status = 'completed', conclusion = 'skipped', expected = '⊘' },
-      { status = 'in_progress', conclusion = nil, expected = '⊙' },
-      { status = 'queued', conclusion = nil, expected = '○' },
-      { status = 'waiting', conclusion = nil, expected = '○' },
-      { status = 'unknown', conclusion = nil, expected = '?' },
-    }
+    describe('with default icons', function()
+      local test_cases = {
+        { status = 'completed', conclusion = 'success', expected = '✓' },
+        { status = 'completed', conclusion = 'failure', expected = '✗' },
+        { status = 'completed', conclusion = 'cancelled', expected = '⊘' },
+        { status = 'completed', conclusion = 'skipped', expected = '⊘' },
+        { status = 'in_progress', conclusion = nil, expected = '⊙' },
+        { status = 'queued', conclusion = nil, expected = '○' },
+        { status = 'waiting', conclusion = nil, expected = '○' },
+        { status = 'unknown', conclusion = nil, expected = '?' },
+      }
 
-    for _, tc in ipairs(test_cases) do
-      it(string.format('should return "%s" for status=%s, conclusion=%s', tc.expected, tc.status, tc.conclusion or 'nil'), function()
-        assert.equals(tc.expected, formatter.get_status_icon(tc.status, tc.conclusion))
+      for _, tc in ipairs(test_cases) do
+        it(
+          string.format(
+            'should return "%s" for status=%s, conclusion=%s',
+            tc.expected,
+            tc.status,
+            tc.conclusion or 'nil'
+          ),
+          function()
+            assert.equals(tc.expected, formatter.get_status_icon(tc.status, tc.conclusion))
+          end
+        )
+      end
+    end)
+
+    describe('with custom icons', function()
+      it('should use custom success icon', function()
+        local custom_icons = { success = '[OK]' }
+        assert.equals('[OK]', formatter.get_status_icon('completed', 'success', custom_icons))
       end)
-    end
+
+      it('should use custom failure icon', function()
+        local custom_icons = { failure = '[FAIL]' }
+        assert.equals('[FAIL]', formatter.get_status_icon('completed', 'failure', custom_icons))
+      end)
+
+      it('should use custom cancelled icon', function()
+        local custom_icons = { cancelled = '[CANCEL]' }
+        assert.equals('[CANCEL]', formatter.get_status_icon('completed', 'cancelled', custom_icons))
+      end)
+
+      it('should use custom skipped icon', function()
+        local custom_icons = { skipped = '[SKIP]' }
+        assert.equals('[SKIP]', formatter.get_status_icon('completed', 'skipped', custom_icons))
+      end)
+
+      it('should use custom in_progress icon', function()
+        local custom_icons = { in_progress = '[RUN]' }
+        assert.equals('[RUN]', formatter.get_status_icon('in_progress', nil, custom_icons))
+      end)
+
+      it('should use custom queued icon', function()
+        local custom_icons = { queued = '[QUEUE]' }
+        assert.equals('[QUEUE]', formatter.get_status_icon('queued', nil, custom_icons))
+      end)
+
+      it('should use custom waiting icon', function()
+        local custom_icons = { waiting = '[WAIT]' }
+        assert.equals('[WAIT]', formatter.get_status_icon('waiting', nil, custom_icons))
+      end)
+
+      it('should use custom unknown icon', function()
+        local custom_icons = { unknown = '[???]' }
+        assert.equals('[???]', formatter.get_status_icon('unknown', nil, custom_icons))
+      end)
+
+      it('should fall back to default icons when custom icon is not provided', function()
+        local custom_icons = { success = '[OK]' }
+        -- failure icon not provided, should use default
+        assert.equals('✗', formatter.get_status_icon('completed', 'failure', custom_icons))
+      end)
+    end)
   end)
 
   describe('format_run', function()
@@ -77,6 +135,26 @@ describe('history.ui.formatter', function()
       assert.matches('⊙', result)
       assert.matches('#12347', result)
       assert.matches('%(running%)', result)
+    end)
+
+    it('should format with custom icons', function()
+      local run = {
+        databaseId = 99999,
+        displayTitle = 'custom icon test',
+        headBranch = 'main',
+        status = 'completed',
+        conclusion = 'success',
+        createdAt = '2025-10-19T10:00:00Z',
+        updatedAt = '2025-10-19T10:03:00Z',
+      }
+
+      local custom_icons = { success = '[OK]' }
+      local result = formatter.format_run(run, now, custom_icons)
+      assert.matches('%[OK%]', result)
+      assert.matches('#99999', result)
+      assert.matches('custom icon test', result)
+      -- Ensure default icon is NOT used
+      assert.not_matches('✓', result)
     end)
   end)
 end)

@@ -2,8 +2,8 @@ local time = require('github-actions.lib.time')
 
 local M = {}
 
--- Status icons
-local ICONS = {
+-- Default status icons
+local DEFAULT_ICONS = {
   success = '✓',
   failure = '✗',
   cancelled = '⊘',
@@ -14,24 +14,55 @@ local ICONS = {
   unknown = '?',
 }
 
+---@class HistoryIcons
+---@field success? string Icon for successful runs
+---@field failure? string Icon for failed runs
+---@field cancelled? string Icon for cancelled runs
+---@field skipped? string Icon for skipped runs
+---@field in_progress? string Icon for in-progress runs
+---@field queued? string Icon for queued runs
+---@field waiting? string Icon for waiting runs
+---@field unknown? string Icon for unknown status runs
+
+---Merge custom icons with default icons
+---@param custom_icons? HistoryIcons Custom icon configuration
+---@return table merged_icons Merged icon configuration
+local function merge_icons(custom_icons)
+  if not custom_icons then
+    return DEFAULT_ICONS
+  end
+
+  local merged = vim.deepcopy(DEFAULT_ICONS)
+  for key, value in pairs(custom_icons) do
+    if value ~= nil then
+      merged[key] = value
+    end
+  end
+  return merged
+end
+
 ---Get status icon for a run
 ---@param status string Run status ("completed"|"in_progress"|"queued")
 ---@param conclusion string|nil Run conclusion ("success"|"failure"|"cancelled"|"skipped"|nil)
+---@param custom_icons? HistoryIcons Custom icon configuration
 ---@return string Icon
-function M.get_status_icon(status, conclusion)
+function M.get_status_icon(status, conclusion, custom_icons)
+  local icons = merge_icons(custom_icons)
+
   if status == 'completed' and conclusion then
-    return ICONS[conclusion] or ICONS.unknown
+    return icons[conclusion] or icons.unknown
   end
 
-  return ICONS[status] or ICONS.unknown
+  return icons[status] or icons.unknown
 end
 
 ---Format a workflow run for display
 ---@param run table Run object with databaseId, displayTitle, headBranch, status, conclusion, createdAt, updatedAt
 ---@param current_time? number Current time (for testing)
+---@param custom_icons? HistoryIcons Custom icon configuration
 ---@return string Formatted run string
-function M.format_run(run, current_time)
-  local icon = M.get_status_icon(run.status, run.conclusion)
+function M.format_run(run, current_time, custom_icons)
+  local icon = M.get_status_icon(run.status, run.conclusion, custom_icons)
   local id = '#' .. run.databaseId
   local branch = run.headBranch .. ':'
   local title = run.displayTitle

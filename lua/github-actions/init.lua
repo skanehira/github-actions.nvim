@@ -1,6 +1,10 @@
+---@class HistoryOptions
+---@field highlights? HistoryHighlightOptions Highlight options for workflow history display
+---@field icons? HistoryIcons Icon options for workflow history display
+
 ---@class GithubActionsConfig
 ---@field actions? VirtualTextOptions Display options for GitHub Actions version checking
----@field history? HistoryHighlightOptions Highlight options for workflow history display
+---@field history? HistoryOptions Options for workflow history display
 
 ---@class GithubActions
 local M = {}
@@ -21,15 +25,25 @@ function M.setup(opts)
   opts = opts or {}
 
   -- Setup highlight groups with custom history highlights if provided
-  highlights.setup(opts.history)
+  local history_highlights = opts.history and opts.history.highlights or nil
+  highlights.setup(history_highlights)
 
   -- Build default configuration (must be done here to get current default_options)
   local default_config = {
     actions = vim.deepcopy(display.default_options),
+    history = {
+      icons = nil, -- Will use formatter's default icons if not provided
+    },
   }
 
   -- Merge user config with defaults
   config = vim.tbl_deep_extend('force', default_config, opts)
+end
+
+---Get current configuration
+---@return GithubActionsConfig config Current configuration
+function M.get_config()
+  return config
 end
 
 ---Check and update version information for current buffer
