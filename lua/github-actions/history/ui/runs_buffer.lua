@@ -52,22 +52,26 @@ end
 ---Apply syntax highlighting to buffer lines
 ---@param bufnr number Buffer number
 ---@param runs table[] List of run objects
-local function apply_highlights(bufnr, runs)
+---@param custom_highlights? HistoryHighlights Custom highlight configuration
+local function apply_highlights(bufnr, runs, custom_highlights)
   local ns = vim.api.nvim_create_namespace('github-actions-history')
   vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+
+  -- Merge custom highlights with defaults
+  local highlights = formatter.merge_highlights(custom_highlights)
 
   -- Highlight header (line 0)
   vim.api.nvim_buf_set_extmark(bufnr, ns, 0, 0, {
     end_line = 0,
     end_col = #vim.api.nvim_buf_get_lines(bufnr, 0, 1, false)[1],
-    hl_group = 'GitHubActionsHistoryHeader',
+    hl_group = highlights.header,
   })
 
   -- Highlight separator (line 1)
   vim.api.nvim_buf_set_extmark(bufnr, ns, 1, 0, {
     end_line = 1,
     end_col = #vim.api.nvim_buf_get_lines(bufnr, 1, 2, false)[1],
-    hl_group = 'GitHubActionsHistorySeparator',
+    hl_group = highlights.separator,
   })
 
   -- Highlight each run line (starting from line 3)
@@ -75,17 +79,17 @@ local function apply_highlights(bufnr, runs)
     local line_idx = i + 2 -- Header + separator + empty line
 
     -- Highlight status icon
-    local hl_group = 'GitHubActionsHistoryQueued'
+    local hl_group = highlights.queued
     if run.status == 'completed' then
       if run.conclusion == 'success' then
-        hl_group = 'GitHubActionsHistorySuccess'
+        hl_group = highlights.success
       elseif run.conclusion == 'failure' then
-        hl_group = 'GitHubActionsHistoryFailure'
+        hl_group = highlights.failure
       elseif run.conclusion == 'cancelled' or run.conclusion == 'skipped' then
-        hl_group = 'GitHubActionsHistoryCancelled'
+        hl_group = highlights.cancelled
       end
     elseif run.status == 'in_progress' then
-      hl_group = 'GitHubActionsHistoryRunning'
+      hl_group = highlights.running
     end
     vim.api.nvim_buf_set_extmark(bufnr, ns, line_idx, 0, {
       end_col = 1,
@@ -101,7 +105,7 @@ local function apply_highlights(bufnr, runs)
       if id_end then
         vim.api.nvim_buf_set_extmark(bufnr, ns, line_idx, id_start - 1, {
           end_col = id_end - 1,
-          hl_group = 'GitHubActionsHistoryRunId',
+          hl_group = highlights.run_id,
         })
       end
     end
@@ -112,7 +116,7 @@ local function apply_highlights(bufnr, runs)
       if branch_end then
         vim.api.nvim_buf_set_extmark(bufnr, ns, line_idx, id_end, {
           end_col = branch_end,
-          hl_group = 'GitHubActionsHistoryBranch',
+          hl_group = highlights.branch,
         })
       end
     end
@@ -124,7 +128,7 @@ local function apply_highlights(bufnr, runs)
       vim.api.nvim_buf_set_extmark(bufnr, ns, line_idx, time_start - 1, {
         end_line = line_idx,
         end_col = #line,
-        hl_group = 'GitHubActionsHistoryTime',
+        hl_group = highlights.time,
       })
     end
   end
@@ -135,7 +139,7 @@ local function apply_highlights(bufnr, runs)
   vim.api.nvim_buf_set_extmark(bufnr, ns, footer_line, 0, {
     end_line = footer_line,
     end_col = #footer_text,
-    hl_group = 'GitHubActionsHistoryTime',
+    hl_group = highlights.time,
   })
 end
 
@@ -143,7 +147,8 @@ end
 ---@param bufnr number Buffer number
 ---@param runs table[] List of run objects
 ---@param custom_icons? HistoryIcons Custom icon configuration
-function M.render(bufnr, runs, custom_icons)
+---@param custom_highlights? HistoryHighlights Custom highlight configuration
+function M.render(bufnr, runs, custom_icons, custom_highlights)
   -- Make buffer modifiable temporarily
   vim.bo[bufnr].modifiable = true
 
@@ -177,7 +182,7 @@ function M.render(bufnr, runs, custom_icons)
   -- Apply highlights (highlight groups are already setup in init.lua)
   setup_buffer_highlights(bufnr)
   if #runs > 0 then
-    apply_highlights(bufnr, runs)
+    apply_highlights(bufnr, runs, custom_highlights)
   end
 
   -- Make buffer read-only again

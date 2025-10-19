@@ -2,16 +2,30 @@ local time = require('github-actions.lib.time')
 
 local M = {}
 
--- Default status icons
-local DEFAULT_ICONS = {
-  success = '✓',
-  failure = '✗',
-  cancelled = '⊘',
-  skipped = '⊘',
-  in_progress = '⊙',
-  queued = '○',
-  waiting = '○',
-  unknown = '?',
+-- Default options
+M.default_options = {
+  icons = {
+    success = '✓',
+    failure = '✗',
+    cancelled = '⊘',
+    skipped = '⊘',
+    in_progress = '⊙',
+    queued = '○',
+    waiting = '○',
+    unknown = '?',
+  },
+  highlights = {
+    success = 'GitHubActionsHistorySuccess',
+    failure = 'GitHubActionsHistoryFailure',
+    cancelled = 'GitHubActionsHistoryCancelled',
+    running = 'GitHubActionsHistoryRunning',
+    queued = 'GitHubActionsHistoryQueued',
+    run_id = 'GitHubActionsHistoryRunId',
+    branch = 'GitHubActionsHistoryBranch',
+    time = 'GitHubActionsHistoryTime',
+    header = 'GitHubActionsHistoryHeader',
+    separator = 'GitHubActionsHistorySeparator',
+  },
 }
 
 ---@class HistoryIcons
@@ -24,16 +38,45 @@ local DEFAULT_ICONS = {
 ---@field waiting? string Icon for waiting runs
 ---@field unknown? string Icon for unknown status runs
 
+---@class HistoryHighlights
+---@field success? string Highlight group for successful runs
+---@field failure? string Highlight group for failed runs
+---@field cancelled? string Highlight group for cancelled runs
+---@field running? string Highlight group for running runs
+---@field queued? string Highlight group for queued runs
+---@field run_id? string Highlight group for run ID
+---@field branch? string Highlight group for branch name
+---@field time? string Highlight group for time information
+---@field header? string Highlight group for header
+---@field separator? string Highlight group for separator
+
 ---Merge custom icons with default icons
 ---@param custom_icons? HistoryIcons Custom icon configuration
 ---@return table merged_icons Merged icon configuration
 local function merge_icons(custom_icons)
   if not custom_icons then
-    return DEFAULT_ICONS
+    return M.default_options.icons
   end
 
-  local merged = vim.deepcopy(DEFAULT_ICONS)
+  local merged = vim.deepcopy(M.default_options.icons)
   for key, value in pairs(custom_icons) do
+    if value ~= nil then
+      merged[key] = value
+    end
+  end
+  return merged
+end
+
+---Merge custom highlights with default highlights
+---@param custom_highlights? HistoryHighlights Custom highlight configuration
+---@return table merged_highlights Merged highlight configuration
+function M.merge_highlights(custom_highlights)
+  if not custom_highlights then
+    return M.default_options.highlights
+  end
+
+  local merged = vim.deepcopy(M.default_options.highlights)
+  for key, value in pairs(custom_highlights) do
     if value ~= nil then
       merged[key] = value
     end

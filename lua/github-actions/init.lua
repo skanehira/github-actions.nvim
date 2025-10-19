@@ -1,5 +1,6 @@
 ---@class HistoryOptions
----@field highlights? HistoryHighlightOptions Highlight options for workflow history display
+---@field highlight_colors? HistoryHighlightOptions Highlight color options for workflow history display (global setup)
+---@field highlights? HistoryHighlights Highlight group names for workflow history display (per-buffer)
 ---@field icons? HistoryIcons Icon options for workflow history display
 
 ---@class GithubActionsConfig
@@ -14,6 +15,7 @@ local display = require('github-actions.display')
 local highlights = require('github-actions.lib.highlights')
 local git = require('github-actions.lib.git')
 local input = require('github-actions.workflow.input')
+local formatter = require('github-actions.history.ui.formatter')
 
 ---Current configuration
 ---@type GithubActionsConfig
@@ -24,16 +26,14 @@ local config = {}
 function M.setup(opts)
   opts = opts or {}
 
-  -- Setup highlight groups with custom history highlights if provided
-  local history_highlights = opts.history and opts.history.highlights or nil
-  highlights.setup(history_highlights)
+  -- Setup highlight groups with custom history highlight colors if provided
+  local history_highlight_colors = opts.history and opts.history.highlight_colors or nil
+  highlights.setup(history_highlight_colors)
 
   -- Build default configuration (must be done here to get current default_options)
   local default_config = {
     actions = vim.deepcopy(display.default_options),
-    history = {
-      icons = nil, -- Will use formatter's default icons if not provided
-    },
+    history = vim.deepcopy(formatter.default_options),
   }
 
   -- Merge user config with defaults

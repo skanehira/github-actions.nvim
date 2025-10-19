@@ -48,7 +48,8 @@ if is_workflow then
     local history = require('github-actions.history.init')
     local config = github_actions.get_config()
     local icons = config.history and config.history.icons or nil
-    history.show_history(bufnr, icons)
+    local highlights = config.history and config.history.highlights or nil
+    history.show_history(bufnr, icons, highlights)
   end, {
     desc = 'Show workflow run history for current buffer',
   })
