@@ -36,11 +36,18 @@ vim.api.nvim_create_autocmd({ 'TextChanged', 'TextChangedI' }, {
   desc = 'Check GitHub Actions versions on text change (debounced)',
 })
 
--- Add command for workflow dispatch (only for workflow files)
+-- Add commands for workflow files
 if is_workflow then
   vim.api.nvim_buf_create_user_command(bufnr, 'GithubActionsDispatch', function()
     github_actions.dispatch_workflow()
   end, {
     desc = 'Dispatch the current workflow using gh CLI',
+  })
+
+  vim.api.nvim_buf_create_user_command(bufnr, 'GithubActionsHistory', function()
+    local history = require('github-actions.history.init')
+    history.show_history(bufnr)
+  end, {
+    desc = 'Show workflow run history for current buffer',
   })
 end
