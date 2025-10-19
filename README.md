@@ -8,6 +8,7 @@ A Neovim plugin for managing GitHub Actions workflows directly from Neovim.
 
 - 📦 Check GitHub Actions versions automatically
 - 🚀 Dispatch workflows with `workflow_dispatch` trigger
+- 📊 View workflow run history with status, duration, and timestamps
 
 ## Requirements
 
@@ -38,8 +39,8 @@ The plugin automatically activates when you open:
 Version information is displayed inline at the end of each line using GitHub Actions:
 
 ```yaml
-- uses: actions/checkout@v4   v5.0.0 (latest)
-- uses: actions/setup-node@v3   v4.1.0 (outdated)
+- uses: actions/checkout@v4   v5.0.0 (latest)
+- uses: actions/setup-node@v3   v4.1.0 (outdated)
 ```
 
 ## Configuration
@@ -52,9 +53,9 @@ The plugin works out of the box with sensible defaults. You can customize it:
 require('github-actions').setup({
   actions = {
     icons = {
-      outdated = '',  -- Icon for outdated versions (default)
-      latest = '',    -- Icon for latest versions (default)
-      error = '',     -- Icon for error (default)
+      outdated = '',  -- Icon for outdated versions (default)
+      latest = '',    -- Icon for latest versions (default)
+      error = '',     -- Icon for error (default)
     },
     highlight_latest = 'GitHubActionsVersionLatest',      -- Highlight for latest versions
     highlight_outdated = 'GitHubActionsVersionOutdated',  -- Highlight for outdated versions
@@ -63,12 +64,45 @@ require('github-actions').setup({
     highlight_icon_outdated = 'GitHubActionsIconOutdated', -- Highlight for outdated icon
     highlight_icon_error = 'GitHubActionsIconError',      -- Highlight for error icon
   },
+  history = {
+    icons = {
+      success = '✓',      -- Icon for successful runs (default)
+      failure = '✗',      -- Icon for failed runs (default)
+      cancelled = '⊘',    -- Icon for cancelled runs (default)
+      skipped = '⊘',      -- Icon for skipped runs (default)
+      in_progress = '⊙',  -- Icon for in-progress runs (default)
+      queued = '○',       -- Icon for queued runs (default)
+      waiting = '○',      -- Icon for waiting runs (default)
+      unknown = '?',      -- Icon for unknown status runs (default)
+    },
+    highlights = {
+      success = 'GitHubActionsHistorySuccess',      -- Highlight for successful runs
+      failure = 'GitHubActionsHistoryFailure',      -- Highlight for failed runs
+      cancelled = 'GitHubActionsHistoryCancelled',  -- Highlight for cancelled runs
+      running = 'GitHubActionsHistoryRunning',      -- Highlight for running runs
+      queued = 'GitHubActionsHistoryQueued',        -- Highlight for queued runs
+      run_id = 'GitHubActionsHistoryRunId',         -- Highlight for run ID
+      branch = 'GitHubActionsHistoryBranch',        -- Highlight for branch name
+      time = 'GitHubActionsHistoryTime',            -- Highlight for time information
+      header = 'GitHubActionsHistoryHeader',        -- Highlight for header
+      separator = 'GitHubActionsHistorySeparator',  -- Highlight for separator
+    },
+    -- Optional: customize highlight colors globally
+    highlight_colors = {
+      success = '#00ff00',    -- Color for successful runs
+      failure = '#ff0000',    -- Color for failed runs
+      cancelled = '#808080',  -- Color for cancelled runs
+      running = '#ffff00',    -- Color for running runs
+      queued = '#0000ff',     -- Color for queued runs
+    },
+  },
 })
 ```
 
 ## Commands
 
 - `:GithubActionsDispatch` - Dispatch the current workflow (only available in workflow files with `workflow_dispatch` trigger)
+- `:GithubActionsHistory` - Show workflow run history for the current workflow file
 
 ## Keymaps
 
