@@ -173,7 +173,7 @@ local function view_job_logs(bufnr, run_idx, job_idx)
     return
   end
 
-  -- Create log buffer
+  -- Create or reuse log buffer
   local logs_buffer = require('github-actions.history.ui.logs_buffer')
   local log_parser = require('github-actions.history.log_parser')
   local github_actions = require('github-actions')
@@ -182,7 +182,15 @@ local function view_job_logs(bufnr, run_idx, job_idx)
   local title = string.format('Job: %s', job.name)
   local log_bufnr, _ = logs_buffer.create_buffer(title, run.databaseId, config.history)
 
-  -- Show loading indicator in log buffer
+  -- Check cache first
+  local cached_logs = logs_buffer.get_cached_logs(run.databaseId, job.databaseId)
+  if cached_logs then
+    -- Use cached logs
+    logs_buffer.render(log_bufnr, cached_logs)
+    return
+  end
+
+  -- Show loading indicator only for new fetches
   logs_buffer.render(log_bufnr, 'Loading logs...')
 
   -- Fetch logs for the entire job
@@ -196,6 +204,11 @@ local function view_job_logs(bufnr, run_idx, job_idx)
 
       -- Parse and format logs, removing ANSI escape sequences
       local formatted_logs = log_parser.parse(logs or '')
+
+      -- Cache the formatted logs
+      logs_buffer.cache_logs(run.databaseId, job.databaseId, formatted_logs or 'No logs available')
+
+      -- Render the logs
       logs_buffer.render(log_bufnr, formatted_logs or 'No logs available')
     end)
   end)
