@@ -1,5 +1,6 @@
 ---@class GithubActionsConfig
 ---@field actions? VirtualTextOptions Display options for GitHub Actions version checking
+---@field history? HistoryHighlightOptions Highlight options for workflow history display
 
 ---@class GithubActions
 local M = {}
@@ -17,8 +18,10 @@ local config = {}
 ---Setup the plugin with user configuration
 ---@param opts? GithubActionsConfig User configuration
 function M.setup(opts)
-  -- Setup highlight groups
-  highlights.setup()
+  opts = opts or {}
+
+  -- Setup highlight groups with custom history highlights if provided
+  highlights.setup(opts.history)
 
   -- Build default configuration (must be done here to get current default_options)
   local default_config = {
@@ -26,7 +29,7 @@ function M.setup(opts)
   }
 
   -- Merge user config with defaults
-  config = vim.tbl_deep_extend('force', default_config, opts or {})
+  config = vim.tbl_deep_extend('force', default_config, opts)
 end
 
 ---Check and update version information for current buffer
