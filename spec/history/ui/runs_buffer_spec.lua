@@ -78,14 +78,8 @@ describe('history.ui.runs_buffer', function()
       -- Get buffer lines
       local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
 
-      -- Should have header + separator + 2 runs
-      assert.is_true(#lines >= 4, 'Should have at least header, separator, and 2 runs')
-
-      -- Check header
-      assert.matches('GitHub Actions', lines[1])
-
-      -- Check separator
-      assert.matches('━', lines[2])
+      -- Should have 2 runs + footer
+      assert.is_true(#lines >= 2, 'Should have at least 2 runs')
 
       -- Check that runs are rendered
       local content = table.concat(lines, '\n')
@@ -102,8 +96,8 @@ describe('history.ui.runs_buffer', function()
 
       local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
 
-      -- Should have header + separator + empty message
-      assert.is_true(#lines >= 3)
+      -- Should have empty message + footer
+      assert.is_true(#lines >= 1)
       local content = table.concat(lines, '\n')
       assert.matches('No workflow runs found', content)
     end)

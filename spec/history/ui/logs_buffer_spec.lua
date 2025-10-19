@@ -65,15 +65,8 @@ test (ubuntu-latest, stable)	Run tests	2025-10-18T04:09:41.1234567Z Test Suites:
       -- Get buffer lines
       local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
 
-      -- Should have header + separator + logs + footer
-      assert.is_true(#lines >= 9, 'Should have header, separator, logs, and footer')
-
-      -- Check header
-      assert.matches('GitHub Actions', lines[1])
-      assert.matches('Logs', lines[1])
-
-      -- Check separator
-      assert.matches('━', lines[2])
+      -- Should have logs + footer
+      assert.is_true(#lines >= 6, 'Should have logs and footer')
 
       -- Check that logs are rendered
       local content = table.concat(lines, '\n')
@@ -88,8 +81,8 @@ test (ubuntu-latest, stable)	Run tests	2025-10-18T04:09:41.1234567Z Test Suites:
 
       local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
 
-      -- Should have header + separator + empty message
-      assert.is_true(#lines >= 3)
+      -- Should have empty message + footer
+      assert.is_true(#lines >= 1)
       local content = table.concat(lines, '\n')
       assert.matches('No logs available', content)
     end)

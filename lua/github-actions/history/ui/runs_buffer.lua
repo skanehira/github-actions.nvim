@@ -51,22 +51,13 @@ local function get_run_at_cursor(bufnr)
   local cursor = vim.api.nvim_win_get_cursor(0)
   local line_idx = cursor[1] - 1 -- Convert to 0-based
 
-  -- Header is line 0, separator is line 1, empty line is 2
-  -- Runs start at line 3
-  if line_idx < 3 then
-    return nil
-  end
-
   local data = buffer_data[bufnr]
   if not data or not data.runs then
     return nil
   end
 
-  -- Get all lines to count expanded lines
-  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-
   -- Find which run this line belongs to
-  local current_line = 3 -- First run starts at line 3 (0-based)
+  local current_line = 0 -- First run starts at line 0 (0-based)
   for run_idx, run in ipairs(data.runs) do
     if line_idx == current_line then
       return run_idx
@@ -88,31 +79,25 @@ local function get_run_at_cursor(bufnr)
   return nil
 end
 
----Get step at cursor position
+---Get job at cursor position
 ---@param bufnr number Buffer number
----@return number|nil run_idx Run index (1-based)
----@return number|nil job_idx Job index (1-based)
----@return number|nil step_idx Step index (1-based)
-local function get_step_at_cursor(bufnr)
+---@return number|nil run_idx Index of the run
+---@return number|nil job_idx Index of the job
+local function get_job_at_cursor(bufnr)
   local cursor = vim.api.nvim_win_get_cursor(0)
   local line_idx = cursor[1] - 1
 
-  -- Skip header (line 0 and 1) and separator (line 2)
-  if line_idx < 3 then
-    return nil, nil, nil
-  end
-
   local data = buffer_data[bufnr]
   if not data or not data.runs then
-    return nil, nil, nil
+    return nil, nil
   end
 
-  local current_line = 3 -- Start after header and separator
+  local current_line = 0 -- First run starts at line 0
 
   for run_idx, run in ipairs(data.runs) do
     if line_idx == current_line then
       -- Cursor is on run line
-      return nil, nil, nil
+      return nil, nil
     end
 
     current_line = current_line + 1
@@ -122,18 +107,13 @@ local function get_step_at_cursor(bufnr)
       for job_idx, job in ipairs(run.jobs) do
         if line_idx == current_line then
           -- Cursor is on job line
-          return nil, nil, nil
+          return run_idx, job_idx
         end
 
         current_line = current_line + 1
 
         if job.steps then
-          for step_idx, _ in ipairs(job.steps) do
-            if line_idx == current_line then
-              -- Cursor is on step line
-              return run_idx, job_idx, step_idx
-            end
-
+          for _, _ in ipairs(job.steps) do
             current_line = current_line + 1
           end
         end
@@ -141,7 +121,7 @@ local function get_step_at_cursor(bufnr)
     end
   end
 
-  return nil, nil, nil
+  return nil, nil
 end
 
 ---Show loading indicator on current line using virtual text
@@ -173,12 +153,11 @@ local function clear_loading_indicator(bufnr)
   vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
 end
 
----View logs for a step
+---View logs for a job
 ---@param bufnr number Buffer number
----@param run_idx number Run index
----@param job_idx number Job index
----@param step_idx number Step index
-local function view_step_logs(bufnr, run_idx, job_idx, step_idx)
+---@param run_idx number Index of the run in the runs array
+---@param job_idx number Index of the job in the jobs array
+local function view_job_logs(bufnr, run_idx, job_idx)
   local data = buffer_data[bufnr]
   if not data or not data.runs then
     return
@@ -190,25 +169,23 @@ local function view_step_logs(bufnr, run_idx, job_idx, step_idx)
   end
 
   local job = run.jobs[job_idx]
-  if not job or not job.steps then
-    return
-  end
-
-  local step = job.steps[step_idx]
-  if not step then
+  if not job then
     return
   end
 
   -- Create log buffer
   local logs_buffer = require('github-actions.history.ui.logs_buffer')
   local log_parser = require('github-actions.history.log_parser')
-  local title = string.format('%s / %s', job.name, step.name)
-  local log_bufnr, _ = logs_buffer.create_buffer(title, run.databaseId)
+  local github_actions = require('github-actions')
+  local config = github_actions.get_config()
+
+  local title = string.format('Job: %s', job.name)
+  local log_bufnr, _ = logs_buffer.create_buffer(title, run.databaseId, config.history)
 
   -- Show loading indicator in log buffer
   logs_buffer.render(log_bufnr, 'Loading logs...')
 
-  -- Fetch logs
+  -- Fetch logs for the entire job
   history.fetch_logs(run.databaseId, job.databaseId, function(logs, err)
     vim.schedule(function()
       if err then
@@ -224,18 +201,18 @@ local function view_step_logs(bufnr, run_idx, job_idx, step_idx)
   end)
 end
 
----Toggle expand/collapse for run at cursor, or view logs for step
+---Toggle expand/collapse for run at cursor, or view logs for job
 ---@param bufnr number Buffer number
 local function toggle_expand(bufnr)
-  -- First, check if cursor is on a step
-  local step_run_idx, job_idx, step_idx = get_step_at_cursor(bufnr)
-  if step_run_idx and job_idx and step_idx then
-    -- Cursor is on a step, view logs
-    view_step_logs(bufnr, step_run_idx, job_idx, step_idx)
+  -- First, check if cursor is on a job
+  local job_run_idx, job_idx = get_job_at_cursor(bufnr)
+  if job_run_idx and job_idx then
+    -- Cursor is on a job, view logs for entire job
+    view_job_logs(bufnr, job_run_idx, job_idx)
     return
   end
 
-  -- Not on a step, check if on a run
+  -- Not on a job, check if on a run
   local run_idx = get_run_at_cursor(bufnr)
   if not run_idx then
     return
@@ -341,22 +318,8 @@ local function apply_highlights(bufnr, runs, custom_highlights)
   -- Merge custom highlights with defaults
   local highlights = formatter.merge_highlights(custom_highlights)
 
-  -- Highlight header (line 0)
-  vim.api.nvim_buf_set_extmark(bufnr, ns, 0, 0, {
-    end_line = 0,
-    end_col = #vim.api.nvim_buf_get_lines(bufnr, 0, 1, false)[1],
-    hl_group = highlights.header,
-  })
-
-  -- Highlight separator (line 1)
-  vim.api.nvim_buf_set_extmark(bufnr, ns, 1, 0, {
-    end_line = 1,
-    end_col = #vim.api.nvim_buf_get_lines(bufnr, 1, 2, false)[1],
-    hl_group = highlights.separator,
-  })
-
   -- Highlight each run line and expanded content
-  local current_line = 3 -- First run starts at line 3 (0-based)
+  local current_line = 0 -- First run starts at line 0 (0-based)
   for _, run in ipairs(runs) do
     local line = vim.api.nvim_buf_get_lines(bufnr, current_line, current_line + 1, false)[1]
 
@@ -561,16 +524,6 @@ function M.render(bufnr, runs, custom_icons, custom_highlights)
 
   local lines = {}
 
-  -- Add header
-  local bufname = vim.api.nvim_buf_get_name(bufnr)
-  table.insert(lines, bufname)
-
-  -- Get window width for separator
-  local winnr = vim.fn.bufwinid(bufnr)
-  local width = winnr ~= -1 and vim.api.nvim_win_get_width(winnr) or 80
-  table.insert(lines, string.rep('━', width))
-  table.insert(lines, '')
-
   if #runs == 0 then
     table.insert(lines, 'No workflow runs found.')
   else
@@ -596,7 +549,7 @@ function M.render(bufnr, runs, custom_icons, custom_highlights)
   end
 
   table.insert(lines, '')
-  table.insert(lines, 'Press <CR> to expand/view logs, <BS> to collapse, q to close')
+  table.insert(lines, 'Press <CR> to expand run / view job logs, <BS> to collapse, q to close')
 
   -- Set buffer lines
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)

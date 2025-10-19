@@ -2,6 +2,7 @@
 ---@field highlight_colors? HistoryHighlightOptions Highlight color options for workflow history display (global setup)
 ---@field highlights? HistoryHighlights Highlight group names for workflow history display (per-buffer)
 ---@field icons? HistoryIcons Icon options for workflow history display
+---@field logs_fold_by_default? boolean Whether to fold log groups by default (default: true)
 
 ---@class GithubActionsConfig
 ---@field actions? VirtualTextOptions Display options for GitHub Actions version checking
