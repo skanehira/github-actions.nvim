@@ -1,0 +1,74 @@
+{
+  "jobs": [
+    {
+      "completedAt": "2025-10-18T04:10:16Z",
+      "conclusion": "success",
+      "databaseId": 53068027249,
+      "name": "test (ubuntu-latest, stable)",
+      "startedAt": "2025-10-18T04:09:31Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2025-10-18T04:09:36Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2025-10-18T04:09:32Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2025-10-18T04:09:37Z",
+          "conclusion": "success",
+          "name": "Checkout code",
+          "number": 2,
+          "startedAt": "2025-10-18T04:09:36Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2025-10-18T04:10:14Z",
+          "conclusion": "failure",
+          "name": "Run tests",
+          "number": 3,
+          "startedAt": "2025-10-18T04:09:37Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": null,
+          "conclusion": "skipped",
+          "name": "Deploy",
+          "number": 4,
+          "startedAt": null,
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/owner/repo/actions/runs/18610558363/job/53068027249"
+    },
+    {
+      "completedAt": "2025-10-18T04:10:20Z",
+      "conclusion": "success",
+      "databaseId": 53068027250,
+      "name": "lint",
+      "startedAt": "2025-10-18T04:09:33Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2025-10-18T04:09:35Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2025-10-18T04:09:33Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2025-10-18T04:10:20Z",
+          "conclusion": "success",
+          "name": "Run linter",
+          "number": 2,
+          "startedAt": "2025-10-18T04:09:35Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/owner/repo/actions/runs/18610558363/job/53068027250"
+    }
+  ]
+}

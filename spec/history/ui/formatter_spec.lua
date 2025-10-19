@@ -157,4 +157,155 @@ describe('history.ui.formatter', function()
       assert.not_matches('✓', result)
     end)
   end)
+
+  describe('format_job', function()
+    it('should format completed job with duration', function()
+      local job = {
+        name = 'test (ubuntu-latest, stable)',
+        status = 'completed',
+        conclusion = 'success',
+        startedAt = '2025-10-19T10:00:00Z',
+        completedAt = '2025-10-19T10:03:24Z',
+      }
+
+      local result = formatter.format_job(job)
+      assert.matches('Job: test %(ubuntu%-latest, stable%)', result)
+      assert.matches('✓', result)
+      assert.matches('3m 24s', result)
+    end)
+
+    it('should format job with failure', function()
+      local job = {
+        name = 'build',
+        status = 'completed',
+        conclusion = 'failure',
+        startedAt = '2025-10-19T10:00:00Z',
+        completedAt = '2025-10-19T10:01:45Z',
+      }
+
+      local result = formatter.format_job(job)
+      assert.matches('Job: build', result)
+      assert.matches('✗', result)
+      assert.matches('1m 45s', result)
+    end)
+
+    it('should format in-progress job', function()
+      local job = {
+        name = 'deploy',
+        status = 'in_progress',
+        conclusion = nil,
+        startedAt = '2025-10-19T10:00:00Z',
+        completedAt = nil,
+      }
+
+      local result = formatter.format_job(job)
+      assert.matches('Job: deploy', result)
+      assert.matches('⊙', result)
+      assert.matches('%(running%)', result)
+    end)
+
+    it('should format with custom icons', function()
+      local job = {
+        name = 'lint',
+        status = 'completed',
+        conclusion = 'success',
+        startedAt = '2025-10-19T10:00:00Z',
+        completedAt = '2025-10-19T10:00:12Z',
+      }
+
+      local custom_icons = { success = '[PASS]' }
+      local result = formatter.format_job(job, custom_icons)
+      assert.matches('%[PASS%]', result)
+      assert.matches('Job: lint', result)
+      assert.not_matches('✓', result)
+    end)
+  end)
+
+  describe('format_step', function()
+    it('should format completed step with duration', function()
+      local step = {
+        name = 'Run tests',
+        status = 'completed',
+        conclusion = 'success',
+        startedAt = '2025-10-19T10:00:00Z',
+        completedAt = '2025-10-19T10:00:45Z',
+      }
+
+      local result = formatter.format_step(step, false)
+      assert.matches('├─ ✓ Run tests', result)
+      assert.matches('45s', result)
+    end)
+
+    it('should format last step with different prefix', function()
+      local step = {
+        name = 'Deploy',
+        status = 'completed',
+        conclusion = 'success',
+        startedAt = '2025-10-19T10:00:00Z',
+        completedAt = '2025-10-19T10:01:30Z',
+      }
+
+      local result = formatter.format_step(step, true)
+      assert.matches('└─ ✓ Deploy', result)
+      assert.matches('1m 30s', result)
+    end)
+
+    it('should format failed step', function()
+      local step = {
+        name = 'Run tests',
+        status = 'completed',
+        conclusion = 'failure',
+        startedAt = '2025-10-19T10:00:00Z',
+        completedAt = '2025-10-19T10:00:15Z',
+      }
+
+      local result = formatter.format_step(step, false)
+      assert.matches('├─ ✗ Run tests', result)
+      assert.matches('15s', result)
+    end)
+
+    it('should format skipped step', function()
+      local step = {
+        name = 'Deploy',
+        status = 'completed',
+        conclusion = 'skipped',
+        startedAt = nil,
+        completedAt = nil,
+      }
+
+      local result = formatter.format_step(step, true)
+      assert.matches('└─ ⊘ Deploy', result)
+      assert.matches('%(skipped%)', result)
+    end)
+
+    it('should format in-progress step', function()
+      local step = {
+        name = 'Build',
+        status = 'in_progress',
+        conclusion = nil,
+        startedAt = '2025-10-19T10:00:00Z',
+        completedAt = nil,
+      }
+
+      local result = formatter.format_step(step, false)
+      assert.matches('├─ ⊙ Build', result)
+      assert.matches('%(running%)', result)
+    end)
+
+    it('should format with custom icons', function()
+      local step = {
+        name = 'Test',
+        status = 'completed',
+        conclusion = 'success',
+        startedAt = '2025-10-19T10:00:00Z',
+        completedAt = '2025-10-19T10:00:08Z',
+      }
+
+      local custom_icons = { success = '[V]' }
+      local result = formatter.format_step(step, false, custom_icons)
+      assert.matches('%[V%]', result)
+      assert.matches('Test', result)
+      assert.not_matches('✓', result)
+    end)
+  end)
 end)
