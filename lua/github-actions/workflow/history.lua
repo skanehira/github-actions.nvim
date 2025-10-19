@@ -63,4 +63,30 @@ function M.fetch_jobs(run_id, callback)
   end)
 end
 
+---Fetch logs for a specific job using gh CLI
+---@param run_id number Workflow run ID (databaseId)
+---@param job_id number Job ID (databaseId)
+---@param callback fun(logs: string|nil, err: string|nil) Callback with logs text or error
+function M.fetch_logs(run_id, job_id, callback)
+  local cmd = {
+    'gh',
+    'run',
+    'view',
+    tostring(run_id),
+    '--log',
+    '--job=' .. tostring(job_id),
+  }
+
+  vim.system(cmd, { text = true }, function(result)
+    vim.schedule(function()
+      if result.code ~= 0 then
+        callback(nil, result.stderr)
+        return
+      end
+
+      callback(result.stdout, nil)
+    end)
+  end)
+end
+
 return M

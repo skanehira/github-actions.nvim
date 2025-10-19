@@ -286,4 +286,70 @@ describe('workflow.history', function()
       assert.matches('Failed to parse', result_err)
     end)
   end)
+
+  describe('fetch_logs', function()
+    local test_cases = {
+      {
+        name = 'should fetch logs successfully',
+        fixture_name = 'history/job_logs',
+        run_id = 18610558363,
+        job_id = 53068027249,
+        expected_lines = 21, -- Number of lines in fixture (including trailing newline)
+      },
+    }
+
+    for _, tc in ipairs(test_cases) do
+      it(tc.name, function()
+        stub(vim, 'system')
+        local logs_content = fixture.load(tc.fixture_name, 'txt')
+        vim.system.invokes(function(_, _, callback)
+          callback({ code = 0, stdout = logs_content, stderr = '' })
+        end)
+
+        local result_logs
+        local result_err
+
+        history.fetch_logs(tc.run_id, tc.job_id, function(logs, err)
+          result_logs = logs
+          result_err = err
+        end)
+
+        -- Flush vim.schedule queue (non-blocking)
+        flush_scheduled()
+
+        -- Assert outside callback to ensure test failures are properly detected
+        assert.is.not_nil(result_logs or result_err, 'Callback was not called')
+        assert.is_nil(result_err)
+        assert.is_not_nil(result_logs)
+
+        -- Check that logs content is returned
+        local lines = vim.split(result_logs, '\n', { plain = true })
+        assert.equals(tc.expected_lines, #lines)
+      end)
+    end
+
+    it('should handle gh command error', function()
+      stub(vim, 'system')
+      vim.system.invokes(function(_, _, callback)
+        callback({ code = 1, stdout = '', stderr = 'Failed to fetch logs' })
+      end)
+
+      local result_logs
+      local result_err
+
+      history.fetch_logs(123, 456, function(logs, err)
+        result_logs = logs
+        result_err = err
+      end)
+
+      -- Flush vim.schedule queue (non-blocking)
+      flush_scheduled()
+
+      -- Assert outside callback
+      assert.is.not_nil(result_logs or result_err, 'Callback was not called')
+      assert.is_nil(result_logs)
+      assert.is.not_nil(result_err)
+      assert.matches('Failed to fetch logs', result_err)
+    end)
+  end)
 end)
