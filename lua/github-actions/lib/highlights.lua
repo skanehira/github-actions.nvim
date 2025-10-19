@@ -9,6 +9,9 @@
 ---@field time? table Highlight options for time information
 ---@field header? table Highlight options for header
 ---@field separator? table Highlight options for separator
+---@field job_name? table Highlight options for job name
+---@field step_name? table Highlight options for step name
+---@field tree_prefix? table Highlight options for tree prefixes (├─, └─)
 
 ---@class Highlights
 local M = {}
@@ -36,6 +39,9 @@ local default_highlights = {
   GitHubActionsHistoryTime = { fg = '#64748b', default = true }, -- Slate
   GitHubActionsHistoryHeader = { fg = '#94a3b8', bold = true, default = true }, -- Light slate
   GitHubActionsHistorySeparator = { fg = '#475569', default = true }, -- Dark slate
+  GitHubActionsHistoryJobName = { fg = '#a78bfa', bold = true, default = true }, -- Light purple
+  GitHubActionsHistoryStepName = { fg = '#93c5fd', default = true }, -- Light blue
+  GitHubActionsHistoryTreePrefix = { fg = '#64748b', default = true }, -- Slate
 }
 
 ---Apply custom history highlight options to default highlights
@@ -60,6 +66,9 @@ local function merge_history_highlights(custom_opts)
     time = 'GitHubActionsHistoryTime',
     header = 'GitHubActionsHistoryHeader',
     separator = 'GitHubActionsHistorySeparator',
+    job_name = 'GitHubActionsHistoryJobName',
+    step_name = 'GitHubActionsHistoryStepName',
+    tree_prefix = 'GitHubActionsHistoryTreePrefix',
   }
 
   for option_key, hl_group in pairs(mapping) do

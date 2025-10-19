@@ -25,6 +25,9 @@ M.default_options = {
     time = 'GitHubActionsHistoryTime',
     header = 'GitHubActionsHistoryHeader',
     separator = 'GitHubActionsHistorySeparator',
+    job_name = 'GitHubActionsHistoryJobName',
+    step_name = 'GitHubActionsHistoryStepName',
+    tree_prefix = 'GitHubActionsHistoryTreePrefix',
   },
 }
 
@@ -49,6 +52,9 @@ M.default_options = {
 ---@field time? string Highlight group for time information
 ---@field header? string Highlight group for header
 ---@field separator? string Highlight group for separator
+---@field job_name? string Highlight group for job name
+---@field step_name? string Highlight group for step name
+---@field tree_prefix? string Highlight group for tree prefixes (├─, └─)
 
 ---Merge custom icons with default icons
 ---@param custom_icons? HistoryIcons Custom icon configuration
