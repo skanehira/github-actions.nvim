@@ -88,6 +88,25 @@ local function get_run_at_cursor(bufnr)
   return nil
 end
 
+---Show loading indicator on current line
+---@param bufnr number Buffer number
+local function show_loading_indicator(bufnr)
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local line_idx = cursor[1] - 1
+  local line = vim.api.nvim_buf_get_lines(bufnr, line_idx, line_idx + 1, false)[1]
+
+  if not line then
+    return
+  end
+
+  -- Add loading text to the line
+  local loading_text = line .. '  (Loading jobs...)'
+
+  vim.bo[bufnr].modifiable = true
+  vim.api.nvim_buf_set_lines(bufnr, line_idx, line_idx + 1, false, { loading_text })
+  vim.bo[bufnr].modifiable = false
+end
+
 ---Toggle expand/collapse for run at cursor
 ---@param bufnr number Buffer number
 local function toggle_expand(bufnr)
@@ -116,17 +135,26 @@ local function toggle_expand(bufnr)
     run.expanded = true
     M.render(bufnr, data.runs, data.custom_icons, data.custom_highlights)
   else
+    -- Show loading indicator
+    show_loading_indicator(bufnr)
+
     -- Need to fetch jobs first
     history.fetch_jobs(run.databaseId, function(jobs_response, err)
       if err then
-        vim.notify('Failed to fetch jobs: ' .. err, vim.log.levels.ERROR)
+        -- Clear loading indicator and show error
+        vim.schedule(function()
+          M.render(bufnr, data.runs, data.custom_icons, data.custom_highlights)
+          vim.notify('Failed to fetch jobs: ' .. err, vim.log.levels.ERROR)
+        end)
         return
       end
 
       if jobs_response and jobs_response.jobs then
-        run.jobs = jobs_response.jobs
-        run.expanded = true
-        M.render(bufnr, data.runs, data.custom_icons, data.custom_highlights)
+        vim.schedule(function()
+          run.jobs = jobs_response.jobs
+          run.expanded = true
+          M.render(bufnr, data.runs, data.custom_icons, data.custom_highlights)
+        end)
       end
     end)
   end
