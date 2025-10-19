@@ -108,4 +108,162 @@ describe('history.ui.runs_buffer', function()
       assert.matches('No workflow runs found', content)
     end)
   end)
+
+  describe('expand/collapse state management', function()
+    it('should track expanded state for runs', function()
+      local bufnr = runs_buffer.create_buffer('test.yml')
+
+      local runs = {
+        {
+          databaseId = 12345,
+          displayTitle = 'test run',
+          headBranch = 'main',
+          status = 'completed',
+          conclusion = 'success',
+          createdAt = '2025-10-19T10:00:00Z',
+          updatedAt = '2025-10-19T10:05:00Z',
+          expanded = false,
+        },
+      }
+
+      -- Initially not expanded
+      assert.is_false(runs[1].expanded)
+
+      -- Toggle expand
+      runs[1].expanded = true
+      assert.is_true(runs[1].expanded)
+
+      -- Toggle collapse
+      runs[1].expanded = false
+      assert.is_false(runs[1].expanded)
+    end)
+
+    it('should store jobs data when expanded', function()
+      local runs = {
+        {
+          databaseId = 12345,
+          displayTitle = 'test run',
+          headBranch = 'main',
+          status = 'completed',
+          conclusion = 'success',
+          createdAt = '2025-10-19T10:00:00Z',
+          updatedAt = '2025-10-19T10:05:00Z',
+          expanded = false,
+          jobs = nil,
+        },
+      }
+
+      -- Add jobs when expanding
+      runs[1].jobs = {
+        {
+          name = 'test',
+          status = 'completed',
+          conclusion = 'success',
+          startedAt = '2025-10-19T10:00:00Z',
+          completedAt = '2025-10-19T10:03:00Z',
+          steps = {},
+        },
+      }
+      runs[1].expanded = true
+
+      assert.is_not_nil(runs[1].jobs)
+      assert.equals(1, #runs[1].jobs)
+      assert.equals('test', runs[1].jobs[1].name)
+    end)
+  end)
+
+  describe('render with expanded runs', function()
+    it('should render expanded jobs and steps', function()
+      local bufnr = runs_buffer.create_buffer('test.yml')
+
+      local runs = {
+        {
+          databaseId = 12345,
+          displayTitle = 'test run',
+          headBranch = 'main',
+          status = 'completed',
+          conclusion = 'failure',
+          createdAt = '2025-10-19T10:00:00Z',
+          updatedAt = '2025-10-19T10:05:00Z',
+          expanded = true,
+          jobs = {
+            {
+              name = 'build',
+              status = 'completed',
+              conclusion = 'failure',
+              startedAt = '2025-10-19T10:00:00Z',
+              completedAt = '2025-10-19T10:03:00Z',
+              steps = {
+                {
+                  name = 'Setup',
+                  status = 'completed',
+                  conclusion = 'success',
+                  startedAt = '2025-10-19T10:00:00Z',
+                  completedAt = '2025-10-19T10:00:10Z',
+                },
+                {
+                  name = 'Build',
+                  status = 'completed',
+                  conclusion = 'failure',
+                  startedAt = '2025-10-19T10:00:10Z',
+                  completedAt = '2025-10-19T10:03:00Z',
+                },
+              },
+            },
+          },
+        },
+      }
+
+      runs_buffer.render(bufnr, runs)
+
+      local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+      local content = table.concat(lines, '\n')
+
+      -- Should contain run
+      assert.matches('#12345', content)
+      assert.matches('test run', content)
+
+      -- Should contain expanded job
+      assert.matches('Job: build', content)
+
+      -- Should contain steps with tree prefixes
+      assert.matches('├─.*Setup', content)
+      assert.matches('└─.*Build', content)
+    end)
+
+    it('should not render jobs when not expanded', function()
+      local bufnr = runs_buffer.create_buffer('test.yml')
+
+      local runs = {
+        {
+          databaseId = 12345,
+          displayTitle = 'test run',
+          headBranch = 'main',
+          status = 'completed',
+          conclusion = 'success',
+          createdAt = '2025-10-19T10:00:00Z',
+          updatedAt = '2025-10-19T10:05:00Z',
+          expanded = false,
+          jobs = {
+            {
+              name = 'build',
+              status = 'completed',
+              conclusion = 'success',
+            },
+          },
+        },
+      }
+
+      runs_buffer.render(bufnr, runs)
+
+      local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+      local content = table.concat(lines, '\n')
+
+      -- Should contain run
+      assert.matches('#12345', content)
+
+      -- Should NOT contain job when not expanded
+      assert.not_matches('Job: build', content)
+    end)
+  end)
 end)

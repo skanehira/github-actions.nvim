@@ -170,6 +170,21 @@ function M.render(bufnr, runs, custom_icons, custom_highlights)
     -- Add each run
     for _, run in ipairs(runs) do
       table.insert(lines, formatter.format_run(run, nil, custom_icons))
+
+      -- If run is expanded and has jobs, render them
+      if run.expanded and run.jobs then
+        for _, job in ipairs(run.jobs) do
+          table.insert(lines, formatter.format_job(job, custom_icons))
+
+          -- Render steps for this job
+          if job.steps then
+            for step_idx, step in ipairs(job.steps) do
+              local is_last = step_idx == #job.steps
+              table.insert(lines, formatter.format_step(step, is_last, custom_icons))
+            end
+          end
+        end
+      end
     end
   end
 
