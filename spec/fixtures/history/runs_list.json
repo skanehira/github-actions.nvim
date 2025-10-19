@@ -1,0 +1,29 @@
+[
+  {
+    "conclusion": "success",
+    "createdAt": "2025-10-18T04:09:29Z",
+    "databaseId": 18610558363,
+    "displayTitle": "chore: improve test (#2)",
+    "headBranch": "main",
+    "status": "completed",
+    "updatedAt": "2025-10-18T04:10:30Z"
+  },
+  {
+    "conclusion": "failure",
+    "createdAt": "2025-10-18T02:30:15Z",
+    "databaseId": 18610558362,
+    "displayTitle": "fix: bug fix",
+    "headBranch": "fix/bug",
+    "status": "completed",
+    "updatedAt": "2025-10-18T02:31:45Z"
+  },
+  {
+    "conclusion": null,
+    "createdAt": "2025-10-18T01:00:00Z",
+    "databaseId": 18610558361,
+    "displayTitle": "feat: new feature",
+    "headBranch": "main",
+    "status": "in_progress",
+    "updatedAt": "2025-10-18T01:01:30Z"
+  }
+]
