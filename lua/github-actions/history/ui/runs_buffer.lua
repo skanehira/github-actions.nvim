@@ -88,23 +88,33 @@ local function get_run_at_cursor(bufnr)
   return nil
 end
 
----Show loading indicator on current line
+---Show loading indicator on current line using virtual text
 ---@param bufnr number Buffer number
+---@return number line_idx Line index where loading indicator was added
 local function show_loading_indicator(bufnr)
   local cursor = vim.api.nvim_win_get_cursor(0)
   local line_idx = cursor[1] - 1
-  local line = vim.api.nvim_buf_get_lines(bufnr, line_idx, line_idx + 1, false)[1]
 
-  if not line then
-    return
-  end
+  -- Create a namespace for loading indicators
+  local ns = vim.api.nvim_create_namespace('github-actions-loading')
 
-  -- Add loading text to the line
-  local loading_text = line .. '  (Loading jobs...)'
+  -- Clear any existing loading indicators
+  vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
 
-  vim.bo[bufnr].modifiable = true
-  vim.api.nvim_buf_set_lines(bufnr, line_idx, line_idx + 1, false, { loading_text })
-  vim.bo[bufnr].modifiable = false
+  -- Add virtual text to show loading state (doesn't modify buffer content)
+  vim.api.nvim_buf_set_extmark(bufnr, ns, line_idx, 0, {
+    virt_text = { { '  (Loading jobs...)', 'GitHubActionsHistoryTime' } },
+    virt_text_pos = 'eol',
+  })
+
+  return line_idx
+end
+
+---Clear loading indicator
+---@param bufnr number Buffer number
+local function clear_loading_indicator(bufnr)
+  local ns = vim.api.nvim_create_namespace('github-actions-loading')
+  vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
 end
 
 ---Toggle expand/collapse for run at cursor
@@ -143,6 +153,7 @@ local function toggle_expand(bufnr)
       if err then
         -- Clear loading indicator and show error
         vim.schedule(function()
+          clear_loading_indicator(bufnr)
           M.render(bufnr, data.runs, data.custom_icons, data.custom_highlights)
           vim.notify('Failed to fetch jobs: ' .. err, vim.log.levels.ERROR)
         end)
@@ -151,6 +162,7 @@ local function toggle_expand(bufnr)
 
       if jobs_response and jobs_response.jobs then
         vim.schedule(function()
+          clear_loading_indicator(bufnr)
           run.jobs = jobs_response.jobs
           run.expanded = true
           M.render(bufnr, data.runs, data.custom_icons, data.custom_highlights)
