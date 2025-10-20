@@ -1,7 +1,7 @@
 ---@class LogsBuffer
 local M = {}
 
--- Cache for logs content (key: "run_id:job_id", value: logs string)
+-- Cache for logs content (key: "run_id:job_id", value: {raw: string, formatted: string})
 local logs_cache = {}
 
 ---Get buffer name for a log view
@@ -170,19 +170,28 @@ end
 ---Get cached logs for a job
 ---@param run_id number The workflow run ID
 ---@param job_id number The job ID
----@return string|nil logs Cached logs or nil if not found
+---@return string|nil formatted_logs Cached formatted logs or nil if not found
+---@return string|nil raw_logs Cached raw logs or nil if not found
 function M.get_cached_logs(run_id, job_id)
   local cache_key = string.format('%d:%d', run_id, job_id)
-  return logs_cache[cache_key]
+  local cached = logs_cache[cache_key]
+  if cached then
+    return cached.formatted, cached.raw
+  end
+  return nil, nil
 end
 
 ---Cache logs for a job
 ---@param run_id number The workflow run ID
 ---@param job_id number The job ID
----@param logs string The logs content
-function M.cache_logs(run_id, job_id, logs)
+---@param formatted_logs string The formatted logs content
+---@param raw_logs string The raw logs content
+function M.cache_logs(run_id, job_id, formatted_logs, raw_logs)
   local cache_key = string.format('%d:%d', run_id, job_id)
-  logs_cache[cache_key] = logs
+  logs_cache[cache_key] = {
+    formatted = formatted_logs,
+    raw = raw_logs,
+  }
 end
 
 ---Render logs in the buffer

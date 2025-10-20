@@ -183,10 +183,10 @@ local function view_job_logs(bufnr, run_idx, job_idx)
   local log_bufnr, _ = logs_buffer.create_buffer(title, run.databaseId, config.history)
 
   -- Check cache first
-  local cached_logs = logs_buffer.get_cached_logs(run.databaseId, job.databaseId)
-  if cached_logs then
+  local cached_formatted, cached_raw = logs_buffer.get_cached_logs(run.databaseId, job.databaseId)
+  if cached_formatted then
     -- Use cached logs
-    logs_buffer.render(log_bufnr, cached_logs)
+    logs_buffer.render(log_bufnr, cached_formatted)
     return
   end
 
@@ -205,8 +205,8 @@ local function view_job_logs(bufnr, run_idx, job_idx)
       -- Parse and format logs, removing ANSI escape sequences
       local formatted_logs = log_parser.parse(logs or '')
 
-      -- Cache the formatted logs
-      logs_buffer.cache_logs(run.databaseId, job.databaseId, formatted_logs or 'No logs available')
+      -- Cache both raw and formatted logs
+      logs_buffer.cache_logs(run.databaseId, job.databaseId, formatted_logs or 'No logs available', logs or '')
 
       -- Render the logs
       logs_buffer.render(log_bufnr, formatted_logs or 'No logs available')
