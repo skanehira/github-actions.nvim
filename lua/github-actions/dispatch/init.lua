@@ -16,24 +16,24 @@ local function handle_branch_selection(workflow_file, inputs, selected_branch)
   end
 
   -- Collect inputs and dispatch
-  input.collect_inputs(inputs, function(collected_inputs)
-    if not collected_inputs then
-      vim.notify('Workflow dispatch cancelled', vim.log.levels.INFO)
-      return
-    end
-
-    -- Dispatch workflow
-    github.dispatch_workflow(workflow_file, selected_branch, collected_inputs, function(success, err)
-      if success then
-        vim.notify(
-          string.format('Workflow "%s" dispatched successfully on branch "%s"', workflow_file, selected_branch),
-          vim.log.levels.INFO
-        )
-      else
-        vim.notify(string.format('Failed to dispatch workflow: %s', err or 'Unknown error'), vim.log.levels.ERROR)
-      end
-    end)
-  end)
+  input.collect_inputs(inputs, {
+    on_success = function(collected_inputs)
+      -- Dispatch workflow
+      github.dispatch_workflow(workflow_file, selected_branch, collected_inputs, function(success, err)
+        if success then
+          vim.notify(
+            string.format('Workflow "%s" dispatched successfully on branch "%s"', workflow_file, selected_branch),
+            vim.log.levels.INFO
+          )
+        else
+          vim.notify(string.format('Failed to dispatch workflow: %s', err or 'Unknown error'), vim.log.levels.ERROR)
+        end
+      end)
+    end,
+    on_error = function(err)
+      vim.notify(err, vim.log.levels.ERROR)
+    end,
+  })
 end
 
 ---Dispatch workflow with user interaction

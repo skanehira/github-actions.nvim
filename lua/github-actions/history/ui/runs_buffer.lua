@@ -183,7 +183,7 @@ local function view_job_logs(bufnr, run_idx, job_idx)
   local log_bufnr, _ = logs_buffer.create_buffer(title, run.databaseId, config.history)
 
   -- Check cache first
-  local cached_formatted, cached_raw = logs_buffer.get_cached_logs(run.databaseId, job.databaseId)
+  local cached_formatted, _ = logs_buffer.get_cached_logs(run.databaseId, job.databaseId)
   if cached_formatted then
     -- Use cached logs
     logs_buffer.render(log_bufnr, cached_formatted)
