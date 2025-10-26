@@ -53,7 +53,8 @@ describe('history.ui.logs_buffer', function()
     it('should render logs in buffer', function()
       local bufnr, _ = logs_buffer.create_buffer('build / Run tests', 12345)
 
-      local logs = [[test (ubuntu-latest, stable)	Set up job	2025-10-18T04:09:32.3975987Z Current runner version: '2.329.0'
+      local logs =
+        [[test (ubuntu-latest, stable)	Set up job	2025-10-18T04:09:32.3975987Z Current runner version: '2.329.0'
 test (ubuntu-latest, stable)	Set up job	2025-10-18T04:09:32.4000692Z ##[group]Runner Image Provisioner
 test (ubuntu-latest, stable)	Run tests	2025-10-18T04:09:37.1234567Z ##[group]Run npm test
 test (ubuntu-latest, stable)	Run tests	2025-10-18T04:09:38.4567890Z
