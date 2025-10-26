@@ -131,9 +131,12 @@ jobs:
       flush_scheduled()
 
       -- Verify error was shown
+      -- New behavior: if current buffer is not a valid workflow file,
+      -- it tries to find workflow files in .github/workflows/
+      -- Since we don't have that directory in tests, it shows "No workflow files found"
       assert.stub(notify_stub).was_called()
       ---@diagnostic disable-next-line: param-type-mismatch
-      assert.stub(notify_stub).was_called_with(match.matches('workflow name'), vim.log.levels.ERROR)
+      assert.stub(notify_stub).was_called_with(match.matches('No workflow files found'), vim.log.levels.ERROR)
 
       notify_stub:revert()
     end)

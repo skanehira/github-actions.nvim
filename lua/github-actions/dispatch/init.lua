@@ -5,6 +5,7 @@ local parser = require('github-actions.dispatch.parser')
 local input = require('github-actions.dispatch.input')
 local github = require('github-actions.shared.github')
 local git = require('github-actions.lib.git')
+local detector = require('github-actions.shared.workflow')
 
 ---Handle branch selection callback
 ---@param workflow_file string Workflow filename
@@ -40,17 +41,23 @@ local function handle_branch_selection(workflow_file, inputs, selected_branch)
   })
 end
 
----Dispatch workflow with user interaction
----@param bufnr number Buffer number
-function M.dispatch_workflow(bufnr)
+---Dispatch workflow for a specific file
+---@param workflow_filepath string Workflow file path (absolute or relative)
+local function dispatch_workflow_for_file(workflow_filepath)
+  -- Open the file temporarily to parse workflow_dispatch
+  local bufnr = vim.fn.bufadd(workflow_filepath)
+  vim.fn.bufload(bufnr)
+
   -- Get workflow filename
-  local filepath = vim.api.nvim_buf_get_name(bufnr)
-  local workflow_file = vim.fn.fnamemodify(filepath, ':t')
+  local workflow_file = vim.fn.fnamemodify(workflow_filepath, ':t')
 
   -- Parse workflow_dispatch configuration
   local workflow_dispatch = parser.parse_workflow_dispatch(bufnr)
   if not workflow_dispatch then
-    vim.notify('This workflow does not support workflow_dispatch', vim.log.levels.ERROR)
+    vim.notify(
+      string.format('Workflow "%s" does not support workflow_dispatch', workflow_file),
+      vim.log.levels.ERROR
+    )
     return
   end
 
@@ -66,6 +73,46 @@ function M.dispatch_workflow(bufnr)
     prompt = 'Select branch to run workflow on:',
   }, function(selected_branch)
     handle_branch_selection(workflow_file, workflow_dispatch.inputs, selected_branch)
+  end)
+end
+
+---Dispatch workflow with user interaction
+---If current buffer is a workflow file, dispatch it.
+---Otherwise, show a selector to choose a workflow file.
+---@param bufnr number Buffer number
+function M.dispatch_workflow(bufnr)
+  local filepath = vim.api.nvim_buf_get_name(bufnr)
+
+  -- Check if current buffer is a workflow file
+  if detector.is_workflow_file(filepath) then
+    dispatch_workflow_for_file(filepath)
+    return
+  end
+
+  -- Current buffer is not a workflow file, show selector
+  local workflow_files = detector.find_workflow_files()
+  if #workflow_files == 0 then
+    vim.notify('[GitHub Actions] No workflow files found in .github/workflows/', vim.log.levels.ERROR)
+    return
+  end
+
+  -- Extract just the filenames for display
+  local filenames = {}
+  local filepath_map = {}
+  for _, path in ipairs(workflow_files) do
+    local filename = path:match('[^/]+%.ya?ml$')
+    table.insert(filenames, filename)
+    filepath_map[filename] = path
+  end
+
+  vim.ui.select(filenames, {
+    prompt = 'Select workflow file:',
+  }, function(selected)
+    if not selected then
+      return
+    end
+    local selected_path = filepath_map[selected]
+    dispatch_workflow_for_file(selected_path)
   end)
 end
 

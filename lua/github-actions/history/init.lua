@@ -33,28 +33,11 @@ local function validate_workflow_buffer(bufnr)
   return true, nil
 end
 
----Show workflow run history for the current buffer
----@param bufnr number|nil Buffer number (defaults to current buffer)
+---Show workflow run history for a specific workflow file
+---@param workflow_file string Workflow filename
 ---@param custom_icons? HistoryIcons Custom icon configuration
 ---@param custom_highlights? HistoryHighlights Custom highlight configuration
-function M.show_history(bufnr, custom_icons, custom_highlights)
-  bufnr = bufnr or vim.api.nvim_get_current_buf()
-
-  -- Validate workflow buffer
-  local valid, error_msg = validate_workflow_buffer(bufnr)
-  if not valid then
-    vim.notify('[GitHub Actions] ' .. error_msg, vim.log.levels.ERROR)
-    return
-  end
-
-  -- Extract workflow filename
-  local bufname = vim.api.nvim_buf_get_name(bufnr)
-  local workflow_file = extract_workflow_filename(bufname)
-
-  -- This should never be nil due to validate_workflow_buffer, but add assertion for safety
-  assert(workflow_file, 'workflow_file should not be nil after validation')
-
-  -- Fetch and display runs
+local function show_history_for_file(workflow_file, custom_icons, custom_highlights)
   history.fetch_runs(workflow_file, function(runs, err)
     if err then
       vim.notify('[GitHub Actions] Failed to fetch workflow runs: ' .. err, vim.log.levels.ERROR)
@@ -68,6 +51,49 @@ function M.show_history(bufnr, custom_icons, custom_highlights)
 
     local hist_bufnr, _ = runs_buffer.create_buffer(workflow_file)
     runs_buffer.render(hist_bufnr, runs, custom_icons, custom_highlights)
+  end)
+end
+
+---Show workflow run history
+---If current buffer is a workflow file, show its history.
+---Otherwise, show a selector to choose a workflow file.
+---@param bufnr number|nil Buffer number (defaults to current buffer)
+---@param custom_icons? HistoryIcons Custom icon configuration
+---@param custom_highlights? HistoryHighlights Custom highlight configuration
+function M.show_history(bufnr, custom_icons, custom_highlights)
+  bufnr = bufnr or vim.api.nvim_get_current_buf()
+
+  -- Check if current buffer is a workflow file
+  local valid, _ = validate_workflow_buffer(bufnr)
+  if valid then
+    -- Use current buffer's workflow file
+    local bufname = vim.api.nvim_buf_get_name(bufnr)
+    local workflow_file = extract_workflow_filename(bufname)
+    show_history_for_file(workflow_file, custom_icons, custom_highlights)
+    return
+  end
+
+  -- Current buffer is not a workflow file, show selector
+  local workflow_files = detector.find_workflow_files()
+  if #workflow_files == 0 then
+    vim.notify('[GitHub Actions] No workflow files found in .github/workflows/', vim.log.levels.ERROR)
+    return
+  end
+
+  -- Extract just the filenames for display
+  local filenames = {}
+  for _, path in ipairs(workflow_files) do
+    local filename = path:match('[^/]+%.ya?ml$')
+    table.insert(filenames, filename)
+  end
+
+  vim.ui.select(filenames, {
+    prompt = 'Select workflow file:',
+  }, function(selected)
+    if not selected then
+      return
+    end
+    show_history_for_file(selected, custom_icons, custom_highlights)
   end)
 end
 

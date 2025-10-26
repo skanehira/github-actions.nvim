@@ -46,4 +46,32 @@ function M.get_workflow_name(bufnr)
   return nil
 end
 
+---Find all workflow files in the current project
+---@return string[] workflow_files List of workflow file paths relative to cwd
+function M.find_workflow_files()
+  local cwd = vim.fn.getcwd()
+  local workflows_dir = cwd .. '/.github/workflows'
+
+  -- Check if workflows directory exists
+  if vim.fn.isdirectory(workflows_dir) == 0 then
+    return {}
+  end
+
+  -- Find all YAML files in workflows directory
+  local files = vim.fn.glob(workflows_dir .. '/*.yml', false, true)
+  local yaml_files = vim.fn.glob(workflows_dir .. '/*.yaml', false, true)
+
+  -- Combine and convert to relative paths
+  local all_files = vim.list_extend(files, yaml_files)
+  local relative_files = {}
+
+  for _, file in ipairs(all_files) do
+    -- Convert absolute path to relative path
+    local relative = file:gsub('^' .. vim.pesc(cwd) .. '/', '')
+    table.insert(relative_files, relative)
+  end
+
+  return relative_files
+end
+
 return M
