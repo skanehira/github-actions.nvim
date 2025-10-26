@@ -264,6 +264,87 @@ jobs:
       -- Check for custom icon
       assert.equals('⚠', virt_text[1][1], 'should have custom outdated icon')
     end)
+
+    it('should use custom highlight groups for icons', function()
+      local version_info = {
+        line = 4,
+        col = 12,
+        current_version = 'v3',
+        latest_version = '4.0.0',
+        is_latest = false,
+      }
+
+      local opts = {
+        highlight_icon_outdated = 'CustomOutdatedIcon',
+        highlight_icon_latest = 'CustomLatestIcon',
+        highlight_icon_error = 'CustomErrorIcon',
+      }
+
+      display.set_version_text(test_bufnr, version_info, opts)
+
+      local ns = display.get_namespace()
+      local marks = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, { details = true })
+      local virt_text = marks[1][4].virt_text
+      if not virt_text then
+        error(vim.inspect(marks))
+      end
+
+      -- Check for custom highlight group on icon (first chunk)
+      local icon_highlight = virt_text[1][2]
+      assert.equals('CustomOutdatedIcon', icon_highlight, 'should use custom outdated icon highlight')
+    end)
+
+    it('should use custom highlight groups for latest icon', function()
+      local version_info = {
+        line = 4,
+        col = 12,
+        current_version = 'v4',
+        latest_version = '4.0.0',
+        is_latest = true,
+      }
+
+      local opts = {
+        highlight_icon_latest = 'CustomLatestIcon',
+      }
+
+      display.set_version_text(test_bufnr, version_info, opts)
+
+      local ns = display.get_namespace()
+      local marks = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, { details = true })
+      local virt_text = marks[1][4].virt_text
+      if not virt_text then
+        error(vim.inspect(marks))
+      end
+
+      -- Check for custom highlight group on icon (first chunk)
+      local icon_highlight = virt_text[1][2]
+      assert.equals('CustomLatestIcon', icon_highlight, 'should use custom latest icon highlight')
+    end)
+
+    it('should use custom highlight groups for error icon', function()
+      local version_info = {
+        line = 4,
+        col = 12,
+        error = 'Test error',
+      }
+
+      local opts = {
+        highlight_icon_error = 'CustomErrorIcon',
+      }
+
+      display.set_version_text(test_bufnr, version_info, opts)
+
+      local ns = display.get_namespace()
+      local marks = vim.api.nvim_buf_get_extmarks(test_bufnr, ns, 0, -1, { details = true })
+      local virt_text = marks[1][4].virt_text
+      if not virt_text then
+        error(vim.inspect(marks))
+      end
+
+      -- Check for custom highlight group on icon (first chunk)
+      local icon_highlight = virt_text[1][2]
+      assert.equals('CustomErrorIcon', icon_highlight, 'should use custom error icon highlight')
+    end)
   end)
 
   describe('show_versions', function()
