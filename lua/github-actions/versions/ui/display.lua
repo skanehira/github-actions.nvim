@@ -83,6 +83,15 @@ local function merge_opts(opts)
   if opts.highlight_error then
     merged.highlight_error = opts.highlight_error
   end
+  if opts.highlight_icon_latest then
+    merged.highlight_icon_latest = opts.highlight_icon_latest
+  end
+  if opts.highlight_icon_outdated then
+    merged.highlight_icon_outdated = opts.highlight_icon_outdated
+  end
+  if opts.highlight_icon_error then
+    merged.highlight_icon_error = opts.highlight_icon_error
+  end
 
   return merged
 end
