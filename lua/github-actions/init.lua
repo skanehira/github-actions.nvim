@@ -13,6 +13,7 @@ local M = {}
 
 local versions = require('github-actions.versions')
 local dispatch = require('github-actions.dispatch')
+local history = require('github-actions.history')
 local display = require('github-actions.versions.ui.display')
 local highlights = require('github-actions.lib.highlights')
 local formatter = require('github-actions.history.ui.formatter')
@@ -56,6 +57,12 @@ end
 function M.dispatch_workflow()
   local bufnr = vim.api.nvim_get_current_buf()
   dispatch.dispatch_workflow(bufnr)
+end
+
+---Show workflow run history for the current buffer
+function M.show_history()
+  local bufnr = vim.api.nvim_get_current_buf()
+  history.show_history(bufnr, config.history)
 end
 
 return M

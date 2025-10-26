@@ -58,10 +58,13 @@ end
 ---If current buffer is a workflow file, show its history.
 ---Otherwise, show a selector to choose a workflow file.
 ---@param bufnr number|nil Buffer number (defaults to current buffer)
----@param custom_icons? HistoryIcons Custom icon configuration
----@param custom_highlights? HistoryHighlights Custom highlight configuration
-function M.show_history(bufnr, custom_icons, custom_highlights)
+---@param config? HistoryOptions History configuration
+function M.show_history(bufnr, config)
   bufnr = bufnr or vim.api.nvim_get_current_buf()
+  config = config or {}
+
+  local custom_icons = config.icons
+  local custom_highlights = config.highlights
 
   -- Check if current buffer is a workflow file
   local valid, _ = validate_workflow_buffer(bufnr)
@@ -69,7 +72,9 @@ function M.show_history(bufnr, custom_icons, custom_highlights)
     -- Use current buffer's workflow file
     local bufname = vim.api.nvim_buf_get_name(bufnr)
     local workflow_file = extract_workflow_filename(bufname)
-    show_history_for_file(workflow_file, custom_icons, custom_highlights)
+    if workflow_file then
+      show_history_for_file(workflow_file, custom_icons, custom_highlights)
+    end
     return
   end
 
