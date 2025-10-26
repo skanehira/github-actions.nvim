@@ -56,8 +56,11 @@ function M.parse(raw_logs, opts)
     -- Match various forms of ANSI escape sequences:
     -- \27[...m (octal), \x1b[...m (hex), or literal escape character
     -- Pattern: ESC [ <parameters> <letter>
-    result = result:gsub('\27%[([%d;]*)m', '') -- Standard SGR sequences
-    result = result:gsub('\27%[([%d;]*)([A-Za-z])', '') -- Other CSI sequences
+    result = result:gsub('\27%[([%d;]*)m', '') -- Standard SGR sequences (color, style)
+    result = result:gsub('\27%[([%d;]*)([A-Za-z])', '') -- Other CSI sequences (cursor movement, etc.)
+    -- OSC sequences (Operating System Command): \27]...\07 or \27]...\27\
+    result = result:gsub('\27%].-\007', '') -- OSC with BEL terminator
+    result = result:gsub('\27%].-\27\\', '') -- OSC with ST terminator
   end
 
   return result
