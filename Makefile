@@ -2,23 +2,40 @@
 
 DOCKER ?= docker
 DOCKER_IMAGE ?= github-actions-nvim-test
+PWD ?= $(shell pwd)
 
 docker-build:
 	$(DOCKER) build -t $(DOCKER_IMAGE) .
 
 test: docker-build
-	$(DOCKER) run --rm $(DOCKER_IMAGE)
+	$(DOCKER) run --rm \
+		-v "$(PWD)/lua:/workspace/lua:ro" \
+		-v "$(PWD)/spec:/workspace/spec:ro" \
+		-v "$(PWD)/scripts:/workspace/scripts:ro" \
+		-v "$(PWD)/.luacheckrc:/workspace/.luacheckrc:ro" \
+		-v "$(PWD)/.busted:/workspace/.busted:ro" \
+		$(DOCKER_IMAGE)
 
 test-file: docker-build
 	@if [ -z "$(FILE)" ]; then \
 		echo "Usage: make test-file FILE=spec/parser_spec.lua"; \
 		exit 1; \
 	fi
-	$(DOCKER) run --rm -e TEST_FILE="$(FILE)" $(DOCKER_IMAGE)
+	$(DOCKER) run --rm \
+		-v "$(PWD)/lua:/workspace/lua:ro" \
+		-v "$(PWD)/spec:/workspace/spec:ro" \
+		-v "$(PWD)/scripts:/workspace/scripts:ro" \
+		-v "$(PWD)/.luacheckrc:/workspace/.luacheckrc:ro" \
+		-v "$(PWD)/.busted:/workspace/.busted:ro" \
+		-e TEST_FILE="$(FILE)" \
+		$(DOCKER_IMAGE)
 
 # Run linter
 lint: docker-build
-	$(DOCKER) run --rm $(DOCKER_IMAGE) sh -c 'eval $$(luarocks path --tree /workspace/lua_modules) && luacheck lua/'
+	$(DOCKER) run --rm \
+		-v "$(PWD)/lua:/workspace/lua:ro" \
+		-v "$(PWD)/.luacheckrc:/workspace/.luacheckrc:ro" \
+		$(DOCKER_IMAGE) sh -c 'eval $$(luarocks path --tree /workspace/lua_modules) && luacheck lua/'
 
 # Format code
 format:

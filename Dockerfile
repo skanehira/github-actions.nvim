@@ -35,13 +35,18 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | g
 
 WORKDIR /workspace
 
-COPY . .
+# Copy only rockspec first to leverage Docker layer caching
+COPY github-actions.nvim-scm-1.rockspec .
 
+# Install dependencies (cached unless rockspec changes)
 RUN mkdir -p /workspace/lua_modules \
     && luarocks install --tree /workspace/lua_modules --only-deps --deps-mode=all github-actions.nvim-scm-1.rockspec \
     && luarocks install --tree /workspace/lua_modules nlua \
     && luarocks install --tree /workspace/lua_modules busted \
-    && luarocks install --tree /workspace/lua_modules luacheck \
-    && ( [ -d deps/nvim-treesitter ] || git clone --depth 1 https://github.com/nvim-treesitter/nvim-treesitter deps/nvim-treesitter )
+    && luarocks install --tree /workspace/lua_modules luacheck
 
+# Clone nvim-treesitter (cached in layer)
+RUN git clone --depth 1 https://github.com/nvim-treesitter/nvim-treesitter deps/nvim-treesitter
+
+# Default command (source code will be mounted at runtime)
 CMD ["scripts/test/run.sh"]
