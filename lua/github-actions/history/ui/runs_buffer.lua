@@ -198,7 +198,7 @@ local function view_job_logs(bufnr, run_idx, job_idx)
     vim.schedule(function()
       if err then
         logs_buffer.render(log_bufnr, 'Failed to fetch logs: ' .. err)
-        vim.notify('Failed to fetch logs: ' .. err, vim.log.levels.ERROR)
+        vim.notify('[GitHub Actions] Failed to fetch logs: ' .. err, vim.log.levels.ERROR)
         return
       end
 
@@ -261,7 +261,7 @@ local function toggle_expand(bufnr)
         vim.schedule(function()
           clear_loading_indicator(bufnr)
           M.render(bufnr, data.runs, data.custom_icons, data.custom_highlights)
-          vim.notify('Failed to fetch jobs: ' .. err, vim.log.levels.ERROR)
+          vim.notify('[GitHub Actions] Failed to fetch jobs: ' .. err, vim.log.levels.ERROR)
         end)
         return
       end

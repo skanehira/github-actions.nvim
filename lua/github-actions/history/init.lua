@@ -43,7 +43,7 @@ function M.show_history(bufnr, custom_icons, custom_highlights)
   -- Validate workflow buffer
   local valid, error_msg = validate_workflow_buffer(bufnr)
   if not valid then
-    vim.notify(error_msg, vim.log.levels.ERROR)
+    vim.notify('[GitHub Actions] ' .. error_msg, vim.log.levels.ERROR)
     return
   end
 
@@ -57,12 +57,12 @@ function M.show_history(bufnr, custom_icons, custom_highlights)
   -- Fetch and display runs
   history.fetch_runs(workflow_file, function(runs, err)
     if err then
-      vim.notify('Failed to fetch workflow runs: ' .. err, vim.log.levels.ERROR)
+      vim.notify('[GitHub Actions] Failed to fetch workflow runs: ' .. err, vim.log.levels.ERROR)
       return
     end
 
     if not runs then
-      vim.notify('No runs data returned', vim.log.levels.ERROR)
+      vim.notify('[GitHub Actions] No runs data returned', vim.log.levels.ERROR)
       return
     end
 
