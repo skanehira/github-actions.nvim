@@ -2,24 +2,46 @@ local M = {}
 
 local pattern = '(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)Z'
 
+-- Time constants (in seconds)
+local JUST_NOW_THRESHOLD = 5
+local SECONDS_IN_MINUTE = 60
+local SECONDS_IN_HOUR = 3600
+local SECONDS_IN_DAY = 86400
+local SECONDS_IN_WEEK = 604800
+local SECONDS_IN_MONTH = 2592000 -- Approximation: 30 days
+local SECONDS_IN_YEAR = 31536000 -- Approximation: 365 days
+
 -- Cache the timezone offset (difference between local time and UTC in seconds)
 local timezone_offset
 
 ---Get the timezone offset in seconds
+---
+---Timezone offset calculation logic:
+---1. Get current time as local timestamp
+---2. Convert current time to UTC components
+---3. Reinterpret UTC components as local time (this gives us the offset)
+---4. The difference between these two timestamps is the timezone offset
+---
+---Example: If local time is JST (UTC+9) at 18:00
+---  now = 1234567890 (18:00 JST)
+---  utc_date = {hour=9, ...} (09:00 UTC)
+---  utc_as_local = 1234535490 (09:00 JST, interpreted as local)
+---  offset = 1234567890 - 1234535490 = 32400 (9 hours in seconds)
+---
 ---@return number Offset in seconds (positive for timezones ahead of UTC, negative for behind)
 local function get_timezone_offset()
   if timezone_offset then
     return timezone_offset
   end
 
-  -- Get current time
+  -- Get current time as local timestamp
   local now = os.time()
-  -- Get UTC time components
+  -- Get UTC time components from current timestamp
   ---@type osdate
   local utc_date = os.date('!*t', now) --[[@as osdate]]
-  -- Convert UTC components back to timestamp (will be interpreted as local time)
+  -- Convert UTC components back to timestamp (os.time interprets as local time)
   local utc_as_local = os.time(utc_date)
-  -- The difference is the timezone offset
+  -- The difference between these two timestamps is the timezone offset
   timezone_offset = os.difftime(now, utc_as_local)
 
   return timezone_offset
@@ -77,22 +99,22 @@ function M.format_relative(timestamp, current_time)
   local past_time = M.parse_iso8601(timestamp)
   local diff = os.difftime(current_time, past_time)
 
-  if diff < 5 then
+  if diff < JUST_NOW_THRESHOLD then
     return 'just now'
-  elseif diff < 60 then
+  elseif diff < SECONDS_IN_MINUTE then
     return string.format('%ds ago', math.floor(diff))
-  elseif diff < 3600 then
-    return string.format('%dm ago', math.floor(diff / 60))
-  elseif diff < 86400 then
-    return string.format('%dh ago', math.floor(diff / 3600))
-  elseif diff < 604800 then
-    return string.format('%dd ago', math.floor(diff / 86400))
-  elseif diff < 2592000 then
-    return string.format('%dw ago', math.floor(diff / 604800))
-  elseif diff < 31536000 then
-    return string.format('%dmo ago', math.floor(diff / 2592000))
+  elseif diff < SECONDS_IN_HOUR then
+    return string.format('%dm ago', math.floor(diff / SECONDS_IN_MINUTE))
+  elseif diff < SECONDS_IN_DAY then
+    return string.format('%dh ago', math.floor(diff / SECONDS_IN_HOUR))
+  elseif diff < SECONDS_IN_WEEK then
+    return string.format('%dd ago', math.floor(diff / SECONDS_IN_DAY))
+  elseif diff < SECONDS_IN_MONTH then
+    return string.format('%dw ago', math.floor(diff / SECONDS_IN_WEEK))
+  elseif diff < SECONDS_IN_YEAR then
+    return string.format('%dmo ago', math.floor(diff / SECONDS_IN_MONTH))
   else
-    return string.format('%dy ago', math.floor(diff / 31536000))
+    return string.format('%dy ago', math.floor(diff / SECONDS_IN_YEAR))
   end
 end
 
@@ -104,9 +126,9 @@ function M.format_duration(seconds)
     return '0s'
   end
 
-  local hours = math.floor(seconds / 3600)
-  local mins = math.floor((seconds % 3600) / 60)
-  local secs = seconds % 60
+  local hours = math.floor(seconds / SECONDS_IN_HOUR)
+  local mins = math.floor((seconds % SECONDS_IN_HOUR) / SECONDS_IN_MINUTE)
+  local secs = seconds % SECONDS_IN_MINUTE
 
   if hours > 0 then
     return string.format('%dh %dm %ds', hours, mins, secs)
