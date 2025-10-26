@@ -12,6 +12,28 @@ local buffer_data = {}
 ---@return number bufnr Buffer number
 ---@return number winnr Window number
 function M.create_buffer(workflow_file)
+  local bufname = string.format('[GitHub Actions] %s - Run History', workflow_file)
+
+  -- Check if buffer with this name already exists
+  local existing_bufnr = vim.fn.bufnr(bufname)
+  if existing_bufnr ~= -1 and vim.api.nvim_buf_is_valid(existing_bufnr) then
+    -- Buffer exists, find its window or create new one
+    local winnr = vim.fn.bufwinnr(existing_bufnr)
+    if winnr ~= -1 then
+      -- Buffer is already displayed in a window, switch to it
+      -- Convert window number to window ID
+      local winid = vim.fn.win_getid(winnr)
+      vim.api.nvim_set_current_win(winid)
+      return existing_bufnr, winid
+    else
+      -- Buffer exists but not displayed, open it in new tab
+      vim.cmd('tabnew')
+      local winid = vim.api.nvim_get_current_win()
+      vim.api.nvim_win_set_buf(winid, existing_bufnr)
+      return existing_bufnr, winid
+    end
+  end
+
   -- Create a new buffer
   local bufnr = vim.api.nvim_create_buf(false, true)
 
@@ -22,7 +44,6 @@ function M.create_buffer(workflow_file)
   vim.bo[bufnr].modifiable = false
 
   -- Set buffer name
-  local bufname = string.format('[GitHub Actions] %s - Run History', workflow_file)
   vim.api.nvim_buf_set_name(bufnr, bufname)
 
   -- Open buffer in a new tab
@@ -170,6 +191,34 @@ local function view_job_logs(bufnr, run_idx, job_idx)
 
   local job = run.jobs[job_idx]
   if not job then
+    return
+  end
+
+  -- Check if workflow run itself is still in progress
+  -- Even if individual jobs are completed, logs are only available when the entire run completes
+  if run.status == 'in_progress' or run.status == 'queued' then
+    local message = string.format(
+      'Workflow run #%d is still %s. Logs will be available when the entire workflow completes.',
+      run.databaseId,
+      run.status == 'in_progress' and 'running' or 'queued'
+    )
+    vim.schedule(function()
+      vim.notify('[GitHub Actions] ' .. message, vim.log.levels.WARN)
+    end)
+    return
+  end
+
+  -- Check if job is still in progress or queued
+  -- If so, don't open log buffer at all
+  if job.status == 'in_progress' or job.status == 'queued' then
+    local message = string.format(
+      'Job "%s" is still %s. Logs will be available when it completes.',
+      job.name,
+      job.status == 'in_progress' and 'running' or 'queued'
+    )
+    vim.schedule(function()
+      vim.notify('[GitHub Actions] ' .. message, vim.log.levels.WARN)
+    end)
     return
   end
 
