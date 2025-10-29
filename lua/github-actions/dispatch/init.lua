@@ -90,7 +90,6 @@ function M.dispatch_workflow(bufnr)
   -- Current buffer is not a workflow file, show selector
   picker.select_workflow_files({
     prompt = 'Select workflow file:',
-    allow_multiple = false,
     on_select = function(selected_paths)
       dispatch_workflow_for_file(selected_paths[1])
     end,

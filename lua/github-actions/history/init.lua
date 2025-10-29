@@ -85,7 +85,6 @@ function M.show_history(bufnr, config)
   -- Current buffer is not a workflow file, show selector
   picker.select_workflow_files({
     prompt = 'Select workflow file(s)',
-    allow_multiple = true,
     on_select = function(selected_paths)
       -- Multiple selection: open all in new tabs
       for _, filepath in ipairs(selected_paths) do

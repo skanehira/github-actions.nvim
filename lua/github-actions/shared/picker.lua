@@ -5,7 +5,6 @@ local M = {}
 ---Options for workflow file picker
 ---@class PickerOptions
 ---@field prompt string Prompt text to display
----@field allow_multiple boolean Whether to allow multiple selection (telescope only)
 ---@field on_select function(selected: string[]) Callback with selected file path(s)
 
 ---Select workflow files using telescope or vim.ui.select
@@ -32,7 +31,7 @@ function M.select_workflow_files(opts)
   local has_telescope_actions, telescope_actions = pcall(require, 'telescope.actions')
   local has_telescope_state, telescope_state = pcall(require, 'telescope.actions.state')
 
-  if has_telescope and has_telescope_actions and has_telescope_state and opts.allow_multiple then
+  if has_telescope and has_telescope_actions and has_telescope_state then
     -- Use telescope native picker for multi-select support
     local pickers = require('telescope.pickers')
     local finders = require('telescope.finders')

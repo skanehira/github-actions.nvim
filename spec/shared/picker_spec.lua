@@ -24,7 +24,6 @@ describe('shared.picker', function()
 
       picker.select_workflow_files({
         prompt = 'Select workflow:',
-        allow_multiple = false,
         on_select = callback_stub,
       })
 
@@ -54,7 +53,6 @@ describe('shared.picker', function()
 
       picker.select_workflow_files({
         prompt = 'Select workflow:',
-        allow_multiple = true,
         on_select = callback_stub,
       })
 
@@ -78,7 +76,6 @@ describe('shared.picker', function()
 
       picker.select_workflow_files({
         prompt = 'Select workflow:',
-        allow_multiple = false,
         on_select = callback_stub,
       })
 
@@ -111,7 +108,6 @@ describe('shared.picker', function()
 
       picker.select_workflow_files({
         prompt = 'Select workflow:',
-        allow_multiple = false,
         on_select = callback_stub,
       })
 
