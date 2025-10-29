@@ -3,7 +3,7 @@ dofile('spec/minimal_init.lua')
 ---@diagnostic disable: undefined-field
 
 describe('history.init', function()
-  local init = require('github-actions.history.init')
+  local history = require('github-actions.history')
   local buffer_helper = require('spec.helpers.buffer_spec')
 
   local function flush_scheduled()
@@ -54,7 +54,7 @@ jobs:
 
       -- Stub vim.system to return mock data
       local system_stub = stub(vim, 'system')
-      system_stub.invokes(function(cmd, opts, callback)
+      system_stub.invokes(function(cmd, _, callback)
         if cmd[1] == 'gh' and cmd[2] == 'run' and cmd[3] == 'list' then
           vim.schedule(function()
             callback({
@@ -67,7 +67,7 @@ jobs:
       end)
 
       -- Call show_history
-      init.show_history(bufnr, {})
+      history.show_history(bufnr, {})
       flush_scheduled()
 
       -- Verify a new buffer was created
@@ -107,7 +107,7 @@ jobs:
       -- Stub vim.notify to capture error message
       local notify_stub = stub(vim, 'notify')
 
-      init.show_history(bufnr, {})
+      history.show_history(bufnr, {})
       flush_scheduled()
 
       -- Verify error was shown
@@ -139,7 +139,7 @@ jobs:
       -- Stub vim.notify to capture error message
       local notify_stub = stub(vim, 'notify')
 
-      init.show_history(bufnr, {})
+      history.show_history(bufnr, {})
       flush_scheduled()
 
       -- Verify error was shown
@@ -180,7 +180,7 @@ on: push
       -- Stub vim.notify to capture error message
       local notify_stub = stub(vim, 'notify')
 
-      init.show_history(bufnr, {})
+      history.show_history(bufnr, {})
       flush_scheduled()
 
       -- Verify error was shown
@@ -190,6 +190,91 @@ on: push
 
       system_stub:revert()
       notify_stub:revert()
+    end)
+
+    it('should open multiple tabs when multiple workflow files are selected', function()
+      -- Create a non-workflow buffer (so it triggers file selection)
+      local bufnr = vim.api.nvim_create_buf(false, true)
+      vim.api.nvim_buf_set_name(bufnr, 'test.lua')
+
+      -- Stub detector.find_workflow_files to return multiple files
+      local detector = require('github-actions.shared.workflow')
+      local detector_stub = stub(detector, 'find_workflow_files')
+      local workflow_files = {
+        '/repo/.github/workflows/ci.yml',
+        '/repo/.github/workflows/deploy.yml',
+        '/repo/.github/workflows/test.yml',
+      }
+      detector_stub.returns(workflow_files)
+
+      -- Mock gh CLI response
+      local mock_runs = [[
+[
+  {
+    "databaseId": 12345,
+    "displayTitle": "feat: add feature",
+    "headBranch": "main",
+    "status": "completed",
+    "conclusion": "success",
+    "createdAt": "2025-10-19T10:00:00Z",
+    "updatedAt": "2025-10-19T10:05:00Z"
+  }
+]
+]]
+
+      -- Stub vim.system to return mock data
+      local system_stub = stub(vim, 'system')
+      system_stub.invokes(function(cmd, _, callback)
+        if cmd[1] == 'gh' and cmd[2] == 'run' and cmd[3] == 'list' then
+          vim.schedule(function()
+            callback({
+              code = 0,
+              stdout = mock_runs,
+              stderr = '',
+            })
+          end)
+        end
+      end)
+
+      -- Stub vim.ui.select to simulate multiple selection
+      local ui_select_stub = stub(vim.ui, 'select')
+      ui_select_stub.invokes(function(_, opts, on_choice)
+        -- Simulate selecting ci.yml and test.yml (indices 1 and 3)
+        -- In telescope multi-select, the callback receives a table of selected items
+        if opts.prompt:match('Select workflow') then
+          on_choice({ 'ci.yml', 'test.yml' })
+        end
+      end)
+
+      -- Store initial tab count
+      local initial_tabs = vim.fn.tabpagenr('$')
+
+      -- Call show_history
+      history.show_history(bufnr, {})
+      flush_scheduled()
+
+      -- Verify multiple tabs were created
+      -- When selecting 2 files in multi-select mode: both open in new tabs
+      -- So we expect initial_tabs + 2 (two new tabs)
+      local final_tabs = vim.fn.tabpagenr('$')
+      assert.equals(initial_tabs + 2, final_tabs, 'Should create 2 new tabs for 2 selected files')
+
+      -- Verify history buffers were created for both files
+      local history_bufs = {}
+      for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+        if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == 'nofile' then
+          local name = vim.api.nvim_buf_get_name(buf)
+          if name:match('Run History') then
+            table.insert(history_bufs, buf)
+          end
+        end
+      end
+
+      assert.equals(2, #history_bufs, 'Should create 2 history buffers')
+
+      system_stub:revert()
+      ui_select_stub:revert()
+      detector_stub:revert()
     end)
   end)
 end)
