@@ -1,6 +1,6 @@
 # TDD Implementation Examples
 
-This document provides real-world examples from the codebase showing how to apply the TDD workflow described in [Implementing Features with TDD](./implementing-features-with-tdd.md).
+This document provides real-world examples from the codebase showing how to apply the TDD workflow described in [Implementing Features with TDD](./SKILL.md).
 
 ## Complete Example: "Newer Than Latest" Error Display
 
