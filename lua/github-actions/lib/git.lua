@@ -51,6 +51,17 @@ function M.execute_git_command(cmd)
   return stdout, exit_code, stderr
 end
 
+---Get git repository root directory
+---@return string|nil git_root The git root directory path, or nil if not in a git repository
+function M.get_git_root()
+  local stdout, exit_code = M.execute_git_command({ 'git', 'rev-parse', '--show-toplevel' })
+  if exit_code ~= 0 then
+    return nil
+  end
+  -- Remove trailing whitespace/newline
+  return vim.trim(stdout)
+end
+
 ---Get available git branches
 ---@return string[] branches List of branches with default branch first
 function M.get_branches()

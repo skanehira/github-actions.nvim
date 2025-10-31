@@ -46,14 +46,57 @@ function M.get_workflow_name(bufnr)
   return nil
 end
 
+---Find .github/workflows directory by traversing up from start_dir to home directory
+---@param start_dir string Starting directory path
+---@return string|nil workflows_dir The .github/workflows directory path, or nil if not found
+function M.find_workflows_dir_upwards(start_dir)
+  local home_dir = vim.fn.expand('~')
+  local current_dir = start_dir
+
+  while true do
+    local workflows_dir = current_dir .. '/.github/workflows'
+    if vim.fn.isdirectory(workflows_dir) == 1 then
+      return workflows_dir
+    end
+
+    -- Stop if we've reached home directory
+    if current_dir == home_dir then
+      break
+    end
+
+    -- Move up to parent directory
+    local parent_dir = vim.fn.fnamemodify(current_dir, ':h')
+
+    -- Stop if we can't go further up (reached root or same directory)
+    if parent_dir == current_dir then
+      break
+    end
+
+    current_dir = parent_dir
+  end
+
+  return nil
+end
+
 ---Find all workflow files in the current project
 ---@return string[] workflow_files List of workflow file paths relative to cwd
 function M.find_workflow_files()
+  local git = require('github-actions.lib.git')
   local cwd = vim.fn.getcwd()
-  local workflows_dir = cwd .. '/.github/workflows'
+  local workflows_dir
 
-  -- Check if workflows directory exists
-  if vim.fn.isdirectory(workflows_dir) == 0 then
+  -- Check if in a git repository
+  local git_root = git.get_git_root()
+  if git_root then
+    -- Use git root
+    workflows_dir = git_root .. '/.github/workflows'
+  else
+    -- Search upwards from cwd
+    workflows_dir = M.find_workflows_dir_upwards(cwd)
+  end
+
+  -- Return empty list if workflows directory not found
+  if not workflows_dir or vim.fn.isdirectory(workflows_dir) == 0 then
     return {}
   end
 
