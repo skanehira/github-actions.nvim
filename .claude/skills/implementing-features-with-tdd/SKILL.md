@@ -182,7 +182,7 @@ end
 
 ## Complete Example
 
-See [TDD Implementation Examples](./tdd-examples.md) for the full "newer than latest" feature implementation showing all phases.
+See [TDD Implementation Examples](../lua-neovim-testing-best-practices/tdd-examples.md) for the full "newer than latest" feature implementation showing all phases.
 
 ## Commit Format
 
