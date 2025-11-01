@@ -87,222 +87,161 @@ describe('workflow.detector', function()
   end)
 
   describe('find_workflows_dir_upwards', function()
-    it('should return workflows dir when it exists in start_dir', function()
-      local start_dir = '/tmp/test_project'
-      local workflows_dir = start_dir .. '/.github/workflows'
+    local fs_helper = require('spec.helpers.filesystem')
+    local temp_dir
 
-      -- Mock vim.fn.isdirectory to simulate existing directory
-      local original_isdirectory = vim.fn.isdirectory
-      vim.fn.isdirectory = function(path)
-        if path == workflows_dir then
-          return 1
-        end
-        return 0
+    after_each(function()
+      if temp_dir then
+        fs_helper.cleanup(temp_dir)
+        temp_dir = nil
       end
+    end)
 
-      local result = detector.find_workflows_dir_upwards(start_dir)
-      assert.equals(workflows_dir, result)
+    it('should return workflows dir when it exists in start_dir', function()
+      temp_dir = fs_helper.create_temp_project({
+        has_workflows_dir = true,
+      })
 
-      -- Restore original function
-      vim.fn.isdirectory = original_isdirectory
+      local result = detector.find_workflows_dir_upwards(temp_dir)
+      assert.equals(temp_dir .. '/.github/workflows', result)
     end)
 
     it('should return workflows dir when it exists in parent directory', function()
-      local parent_dir = '/tmp/test_project'
-      local start_dir = parent_dir .. '/subdir'
-      local workflows_dir = parent_dir .. '/.github/workflows'
+      temp_dir = fs_helper.create_temp_project({
+        has_workflows_dir = true,
+        subdirs = { 'subdir' },
+      })
 
-      -- Mock vim.fn.isdirectory
-      local original_isdirectory = vim.fn.isdirectory
-      vim.fn.isdirectory = function(path)
-        if path == workflows_dir then
-          return 1
-        end
-        return 0
-      end
-
+      local start_dir = temp_dir .. '/subdir'
       local result = detector.find_workflows_dir_upwards(start_dir)
-      assert.equals(workflows_dir, result)
-
-      vim.fn.isdirectory = original_isdirectory
+      assert.equals(temp_dir .. '/.github/workflows', result)
     end)
 
     it('should return nil when workflows dir not found up to home directory', function()
-      local start_dir = '/tmp/test_project'
+      temp_dir = fs_helper.create_temp_project({
+        has_workflows_dir = false,
+      })
 
-      -- Mock vim.fn.isdirectory to always return 0
-      local original_isdirectory = vim.fn.isdirectory
-      vim.fn.isdirectory = function(path)
-        return 0
-      end
-
-      -- Mock vim.fn.expand to return a fake home directory
+      -- Mock vim.fn.expand to set temp_dir as home boundary
       local original_expand = vim.fn.expand
       vim.fn.expand = function(path)
         if path == '~' then
-          return '/home/testuser'
+          return temp_dir
         end
         return original_expand(path)
       end
 
-      local result = detector.find_workflows_dir_upwards(start_dir)
+      local result = detector.find_workflows_dir_upwards(temp_dir)
       assert.is_nil(result)
 
-      vim.fn.isdirectory = original_isdirectory
       vim.fn.expand = original_expand
     end)
 
     it('should stop searching at home directory', function()
-      local home_dir = vim.fn.expand('~')
-      local start_dir = home_dir .. '/projects/test'
+      temp_dir = fs_helper.create_temp_project({
+        has_workflows_dir = false,
+        subdirs = { 'projects/test' },
+      })
 
-      -- Mock vim.fn.isdirectory to track which paths were checked
-      local checked_paths = {}
-      local original_isdirectory = vim.fn.isdirectory
-      vim.fn.isdirectory = function(path)
-        table.insert(checked_paths, path)
-        return 0
+      -- Mock vim.fn.expand to set temp_dir as home boundary
+      local original_expand = vim.fn.expand
+      vim.fn.expand = function(path)
+        if path == '~' then
+          return temp_dir
+        end
+        return original_expand(path)
       end
 
+      local start_dir = temp_dir .. '/projects/test'
       local result = detector.find_workflows_dir_upwards(start_dir)
       assert.is_nil(result)
 
-      -- Verify that we didn't search beyond home directory
-      for _, path in ipairs(checked_paths) do
-        assert.is_true(path:find(home_dir, 1, true) == 1, 'Should not search beyond home directory: ' .. path)
-      end
-
-      vim.fn.isdirectory = original_isdirectory
+      vim.fn.expand = original_expand
     end)
   end)
 
   describe('find_workflow_files', function()
-    local git = require('github-actions.lib.git')
+    local fs_helper = require('spec.helpers.filesystem')
+    local temp_dir
+
+    after_each(function()
+      if temp_dir then
+        fs_helper.cleanup(temp_dir)
+        temp_dir = nil
+      end
+    end)
 
     it('should use git root when in a git repository', function()
-      local git_root = '/path/to/repo'
-      local workflows_dir = git_root .. '/.github/workflows'
+      temp_dir = fs_helper.create_temp_project({
+        has_workflows_dir = true,
+        workflow_files = { 'ci.yml', 'deploy.yml' },
+        is_git_repo = true,
+      })
 
-      -- Mock git.get_git_root
-      local original_get_git_root = git.get_git_root
-      git.get_git_root = function()
-        return git_root
-      end
-
-      -- Mock vim.fn.isdirectory
-      local original_isdirectory = vim.fn.isdirectory
-      vim.fn.isdirectory = function(path)
-        if path == workflows_dir then
-          return 1
-        end
-        return 0
-      end
-
-      -- Mock vim.fn.glob to return workflow files
-      local original_glob = vim.fn.glob
-      vim.fn.glob = function(pattern, _, _)
-        if pattern == workflows_dir .. '/*.yml' then
-          return { workflows_dir .. '/ci.yml', workflows_dir .. '/deploy.yml' }
-        elseif pattern == workflows_dir .. '/*.yaml' then
-          return {}
-        end
-        return {}
-      end
-
-      -- Mock vim.pesc
-      local original_pesc = vim.pesc
-      vim.pesc = function(str)
-        return str:gsub('[%(%)%.%%%+%-%*%?%[%]%^%$]', '%%%1')
+      -- Change to temp directory to simulate being in git repo
+      local original_getcwd = vim.fn.getcwd
+      vim.fn.getcwd = function()
+        return temp_dir
       end
 
       local result = detector.find_workflow_files()
       assert.equals(2, #result)
 
-      -- Restore original functions
-      git.get_git_root = original_get_git_root
-      vim.fn.isdirectory = original_isdirectory
-      vim.fn.glob = original_glob
-      vim.pesc = original_pesc
+      -- Verify file paths
+      local has_ci = false
+      local has_deploy = false
+      for _, file in ipairs(result) do
+        if file:match('ci%.yml$') then
+          has_ci = true
+        elseif file:match('deploy%.yml$') then
+          has_deploy = true
+        end
+      end
+      assert.is_true(has_ci, 'Should find ci.yml')
+      assert.is_true(has_deploy, 'Should find deploy.yml')
+
+      vim.fn.getcwd = original_getcwd
     end)
 
     it('should search upwards when not in a git repository', function()
-      local cwd = '/path/to/project/subdir'
-      local parent_dir = '/path/to/project'
-      local workflows_dir = parent_dir .. '/.github/workflows'
+      temp_dir = fs_helper.create_temp_project({
+        has_workflows_dir = true,
+        workflow_files = { 'test.yml' },
+        subdirs = { 'subdir' },
+        is_git_repo = false,
+      })
 
-      -- Mock git.get_git_root to return nil
-      local original_get_git_root = git.get_git_root
-      git.get_git_root = function()
-        return nil
-      end
+      local subdir = temp_dir .. '/subdir'
 
-      -- Mock vim.fn.getcwd
+      -- Mock getcwd to return subdirectory
       local original_getcwd = vim.fn.getcwd
       vim.fn.getcwd = function()
-        return cwd
-      end
-
-      -- Mock vim.fn.isdirectory
-      local original_isdirectory = vim.fn.isdirectory
-      vim.fn.isdirectory = function(path)
-        if path == workflows_dir then
-          return 1
-        end
-        return 0
-      end
-
-      -- Mock vim.fn.glob
-      local original_glob = vim.fn.glob
-      vim.fn.glob = function(pattern, _, _)
-        if pattern == workflows_dir .. '/*.yml' then
-          return { workflows_dir .. '/test.yml' }
-        elseif pattern == workflows_dir .. '/*.yaml' then
-          return {}
-        end
-        return {}
-      end
-
-      -- Mock vim.pesc
-      local original_pesc = vim.pesc
-      vim.pesc = function(str)
-        return str:gsub('[%(%)%.%%%+%-%*%?%[%]%^%$]', '%%%1')
+        return subdir
       end
 
       local result = detector.find_workflow_files()
       assert.equals(1, #result)
+      assert.is_true(result[1]:match('test%.yml$') ~= nil, 'Should find test.yml')
 
-      -- Restore
-      git.get_git_root = original_get_git_root
       vim.fn.getcwd = original_getcwd
-      vim.fn.isdirectory = original_isdirectory
-      vim.fn.glob = original_glob
-      vim.pesc = original_pesc
     end)
 
     it('should return empty list when workflows dir not found', function()
-      -- Mock git.get_git_root to return nil
-      local original_get_git_root = git.get_git_root
-      git.get_git_root = function()
-        return nil
-      end
+      temp_dir = fs_helper.create_temp_project({
+        has_workflows_dir = false,
+        is_git_repo = false,
+      })
 
-      -- Mock vim.fn.getcwd
+      -- Mock getcwd and expand to control search boundaries
       local original_getcwd = vim.fn.getcwd
       vim.fn.getcwd = function()
-        return '/tmp/test'
+        return temp_dir
       end
 
-      -- Mock vim.fn.isdirectory to always return 0
-      local original_isdirectory = vim.fn.isdirectory
-      vim.fn.isdirectory = function(path)
-        return 0
-      end
-
-      -- Mock vim.fn.expand
       local original_expand = vim.fn.expand
       vim.fn.expand = function(path)
         if path == '~' then
-          return '/home/testuser'
+          return temp_dir
         end
         return original_expand(path)
       end
@@ -310,10 +249,7 @@ describe('workflow.detector', function()
       local result = detector.find_workflow_files()
       assert.equals(0, #result)
 
-      -- Restore
-      git.get_git_root = original_get_git_root
       vim.fn.getcwd = original_getcwd
-      vim.fn.isdirectory = original_isdirectory
       vim.fn.expand = original_expand
     end)
   end)

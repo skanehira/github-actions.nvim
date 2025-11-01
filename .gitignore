@@ -12,6 +12,7 @@ lua_modules/
 
 # Test dependencies
 deps/
+.test-tmp/
 
 # Documentation
 /doc/tags

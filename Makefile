@@ -8,12 +8,14 @@ docker-build:
 	$(DOCKER) build -t $(DOCKER_IMAGE) .
 
 test: docker-build
+	@mkdir -p "$(PWD)/.test-tmp"
 	$(DOCKER) run --rm \
 		-v "$(PWD)/lua:/workspace/lua:ro" \
 		-v "$(PWD)/spec:/workspace/spec:ro" \
 		-v "$(PWD)/scripts:/workspace/scripts:ro" \
 		-v "$(PWD)/.luacheckrc:/workspace/.luacheckrc:ro" \
 		-v "$(PWD)/.busted:/workspace/.busted:ro" \
+		-v "$(PWD)/.test-tmp:/tmp:rw" \
 		$(DOCKER_IMAGE)
 
 test-file: docker-build
@@ -21,12 +23,14 @@ test-file: docker-build
 		echo "Usage: make test-file FILE=spec/parser_spec.lua"; \
 		exit 1; \
 	fi
+	@mkdir -p "$(PWD)/.test-tmp"
 	$(DOCKER) run --rm \
 		-v "$(PWD)/lua:/workspace/lua:ro" \
 		-v "$(PWD)/spec:/workspace/spec:ro" \
 		-v "$(PWD)/scripts:/workspace/scripts:ro" \
 		-v "$(PWD)/.luacheckrc:/workspace/.luacheckrc:ro" \
 		-v "$(PWD)/.busted:/workspace/.busted:ro" \
+		-v "$(PWD)/.test-tmp:/tmp:rw" \
 		-e TEST_FILE="$(FILE)" \
 		$(DOCKER_IMAGE)
 
