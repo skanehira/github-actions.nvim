@@ -19,23 +19,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Setup nvim-treesitter
-        run:
-          git clone --depth 1 https://github.com/nvim-treesitter/nvim-treesitter deps/nvim-treesitter
-
       - name: Run tests
-        uses: nvim-neorocks/nvim-busted-action@v1
-        with:
-          nvim_version: ${{ matrix.neovim }}
-          before: |
-            set -euo pipefail
-            mkdir -p lua_modules
-            for dir in bin lib share; do
-              target="$HOME/.luarocks/$dir"
-              mkdir -p "$target"
-              rm -rf "lua_modules/$dir"
-              ln -s "$target" "lua_modules/$dir"
-            done
+        run: make test
 
   lint:
     runs-on: ubuntu-latest
