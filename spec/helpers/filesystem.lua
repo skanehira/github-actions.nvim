@@ -18,7 +18,7 @@ function M.create_temp_project(opts)
 
   -- Initialize as git repository if requested
   if opts.is_git_repo then
-    vim.fn.system({ 'git', 'init', temp_dir })
+    vim.fn.system({ 'git', '-C', temp_dir, 'init' })
   end
 
   -- Create .github/workflows if requested

@@ -163,8 +163,20 @@ describe('workflow.detector', function()
   describe('find_workflow_files', function()
     local fs_helper = require('spec.helpers.filesystem')
     local temp_dir
+    local original_getcwd
+    local original_expand
+
+    before_each(function()
+      -- Save original functions
+      original_getcwd = vim.fn.getcwd
+      original_expand = vim.fn.expand
+    end)
 
     after_each(function()
+      -- Restore original functions
+      vim.fn.getcwd = original_getcwd
+      vim.fn.expand = original_expand
+
       if temp_dir then
         fs_helper.cleanup(temp_dir)
         temp_dir = nil
@@ -179,7 +191,6 @@ describe('workflow.detector', function()
       })
 
       -- Change to temp directory to simulate being in git repo
-      local original_getcwd = vim.fn.getcwd
       vim.fn.getcwd = function()
         return temp_dir
       end
@@ -199,8 +210,6 @@ describe('workflow.detector', function()
       end
       assert.is_true(has_ci, 'Should find ci.yml')
       assert.is_true(has_deploy, 'Should find deploy.yml')
-
-      vim.fn.getcwd = original_getcwd
     end)
 
     it('should search upwards when not in a git repository', function()
@@ -214,7 +223,6 @@ describe('workflow.detector', function()
       local subdir = temp_dir .. '/subdir'
 
       -- Mock getcwd to return subdirectory
-      local original_getcwd = vim.fn.getcwd
       vim.fn.getcwd = function()
         return subdir
       end
@@ -222,8 +230,6 @@ describe('workflow.detector', function()
       local result = detector.find_workflow_files()
       assert.equals(1, #result)
       assert.is_true(result[1]:match('test%.yml$') ~= nil, 'Should find test.yml')
-
-      vim.fn.getcwd = original_getcwd
     end)
 
     it('should return empty list when workflows dir not found', function()
@@ -233,12 +239,10 @@ describe('workflow.detector', function()
       })
 
       -- Mock getcwd and expand to control search boundaries
-      local original_getcwd = vim.fn.getcwd
       vim.fn.getcwd = function()
         return temp_dir
       end
 
-      local original_expand = vim.fn.expand
       vim.fn.expand = function(path)
         if path == '~' then
           return temp_dir
@@ -248,9 +252,6 @@ describe('workflow.detector', function()
 
       local result = detector.find_workflow_files()
       assert.equals(0, #result)
-
-      vim.fn.getcwd = original_getcwd
-      vim.fn.expand = original_expand
     end)
   end)
 end)

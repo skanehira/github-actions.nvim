@@ -14,8 +14,12 @@ if vim.fn.isdirectory(treesitter_path) == 1 then
   vim.opt.runtimepath:prepend(treesitter_path)
 
   -- Configure nvim-treesitter to install parsers to deps/parsers
+  local cwd = vim.fn.getcwd()
+  if not cwd then
+    cwd = vim.fn.fnamemodify('.', ':p:h')
+  end
   require('nvim-treesitter.configs').setup({
-    parser_install_dir = vim.fn.getcwd() .. '/deps/parsers',
+    parser_install_dir = cwd .. '/deps/parsers',
     ensure_installed = { 'yaml' },
     sync_install = true,
     ignore_install = {},
