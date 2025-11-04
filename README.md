@@ -41,8 +41,8 @@ The plugin automatically activates when you open:
 Version information is displayed inline at the end of each line using GitHub Actions:
 
 ```yaml
-- uses: actions/checkout@v4   v5.0.0 (latest)
-- uses: actions/setup-node@v3   v4.1.0 (outdated)
+- uses: actions/checkout@v5      v5.0.0
+- uses: actions/setup-node@v3    v4.0.0
 ```
 
 ## Configuration
@@ -149,15 +149,11 @@ You can set up keymaps to call the plugin's functions directly:
   dependencies = {
     'nvim-treesitter/nvim-treesitter',
   },
-  keys = {
-    {
-      '<leader>gd',
-      function()
-        require('github-actions').dispatch_workflow()
-      end,
-      desc = 'Dispatch workflow',
-    },
-  },
-  opts = {},
+  config = function()
+    local actions = require('github-actions')
+    vim.keymap.set('n', '<leader>gd', actions.dispatch_workflow, { desc = 'Dispatch workflow' })
+    vim.keymap.set('n', '<leader>gh', actions.show_history, { desc = 'Dispatch workflow' })
+    actions.setup({});
+  end,
 }
 ```
