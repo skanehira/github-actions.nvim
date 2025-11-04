@@ -116,5 +116,47 @@ lint	UNKNOWN STEP	2025-10-17T11:23:49.1573737Z Valid log line]]
       assert.matches('Fetching', result)
       assert.matches('neovim', result)
     end)
+
+    it('should remove BOM (Byte Order Mark) characters from logs', function()
+      -- BOM character: U+FEFF (UTF-8: EF BB BF)
+      local bom = '\239\187\191' -- UTF-8 encoded BOM
+      local raw_log = 'test\tRun\t2025-10-18T04:09:37.1234567Z '
+        .. bom
+        .. 'Starting job'
+        .. bom
+        .. ' with '
+        .. bom
+        .. 'BOM characters'
+
+      local result = log_parser.parse(raw_log)
+
+      -- BOM should be stripped
+      assert.not_matches('\239\187\191', result)
+
+      -- Content should remain
+      assert.matches('%[04:09:37%]', result)
+      assert.matches('Starting job with BOM characters', result)
+    end)
+
+    it('should remove BOM from multiple log lines', function()
+      local bom = '\239\187\191'
+      local raw_log = bom
+        .. 'test\tRun\t2025-10-18T04:09:37.1234567Z First line'
+        .. bom
+        .. '\n'
+        .. 'test\tRun\t2025-10-18T04:09:38.1234567Z '
+        .. bom
+        .. 'Second line'
+        .. bom
+
+      local result = log_parser.parse(raw_log)
+
+      -- BOM should be stripped from all lines
+      assert.not_matches('\239\187\191', result)
+
+      -- Content should remain
+      assert.matches('%[04:09:37%] First line', result)
+      assert.matches('%[04:09:38%] Second line', result)
+    end)
   end)
 end)

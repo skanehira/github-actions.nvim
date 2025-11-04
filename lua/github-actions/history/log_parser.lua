@@ -63,6 +63,10 @@ function M.parse(raw_logs, opts)
     result = result:gsub('\27%].-\27\\', '') -- OSC with ST terminator
   end
 
+  -- Strip BOM (Byte Order Mark) characters
+  -- BOM: U+FEFF (UTF-8: EF BB BF = \239\187\191)
+  result = result:gsub('\239\187\191', '')
+
   return result
 end
 
