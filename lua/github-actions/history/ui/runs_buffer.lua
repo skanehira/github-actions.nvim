@@ -3,6 +3,7 @@ local history = require('github-actions.history.api')
 local buffer_utils = require('github-actions.shared.buffer_utils')
 local highlighter = require('github-actions.history.ui.highlighter')
 local cursor_tracker = require('github-actions.history.ui.cursor_tracker')
+local loading_indicator = require('github-actions.history.ui.loading_indicator')
 
 local M = {}
 
@@ -82,34 +83,6 @@ function M.create_buffer(workflow_file, open_in_new_tab)
 end
 
 
----Show loading indicator on current line using virtual text
----@param bufnr number Buffer number
----@return number line_idx Line index where loading indicator was added
-local function show_loading_indicator(bufnr)
-  local cursor = vim.api.nvim_win_get_cursor(0)
-  local line_idx = cursor[1] - 1
-
-  -- Create a namespace for loading indicators
-  local ns = vim.api.nvim_create_namespace('github-actions-loading')
-
-  -- Clear any existing loading indicators
-  vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
-
-  -- Add virtual text to show loading state (doesn't modify buffer content)
-  vim.api.nvim_buf_set_extmark(bufnr, ns, line_idx, 0, {
-    virt_text = { { '  (Loading jobs...)', 'GitHubActionsHistoryTime' } },
-    virt_text_pos = 'eol',
-  })
-
-  return line_idx
-end
-
----Clear loading indicator
----@param bufnr number Buffer number
-local function clear_loading_indicator(bufnr)
-  local ns = vim.api.nvim_create_namespace('github-actions-loading')
-  vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
-end
 
 ---View logs for a job
 ---@param bufnr number Buffer number
@@ -238,14 +211,14 @@ local function toggle_expand(bufnr)
     M.render(bufnr, data.runs, data.custom_icons, data.custom_highlights)
   else
     -- Show loading indicator
-    show_loading_indicator(bufnr)
+    loading_indicator.show(bufnr)
 
     -- Need to fetch jobs first
     history.fetch_jobs(run.databaseId, function(jobs_response, err)
       if err then
         -- Clear loading indicator and show error
         vim.schedule(function()
-          clear_loading_indicator(bufnr)
+          loading_indicator.clear(bufnr)
           M.render(bufnr, data.runs, data.custom_icons, data.custom_highlights)
           vim.notify('[GitHub Actions] Failed to fetch jobs: ' .. err, vim.log.levels.ERROR)
         end)
@@ -254,7 +227,7 @@ local function toggle_expand(bufnr)
 
       if jobs_response and jobs_response.jobs then
         vim.schedule(function()
-          clear_loading_indicator(bufnr)
+          loading_indicator.clear(bufnr)
           run.jobs = jobs_response.jobs
           run.expanded = true
           M.render(bufnr, data.runs, data.custom_icons, data.custom_highlights)
