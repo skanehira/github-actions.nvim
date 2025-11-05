@@ -4,6 +4,7 @@ local buffer_utils = require('github-actions.shared.buffer_utils')
 local highlighter = require('github-actions.history.ui.highlighter')
 local cursor_tracker = require('github-actions.history.ui.cursor_tracker')
 local loading_indicator = require('github-actions.history.ui.loading_indicator')
+local log_viewer = require('github-actions.history.ui.log_viewer')
 
 local M = {}
 
@@ -83,96 +84,6 @@ function M.create_buffer(workflow_file, open_in_new_tab)
 end
 
 
-
----View logs for a job
----@param bufnr number Buffer number
----@param run_idx number Index of the run in the runs array
----@param job_idx number Index of the job in the jobs array
-local function view_job_logs(bufnr, run_idx, job_idx)
-  local data = buffer_data[bufnr]
-  if not data or not data.runs then
-    return
-  end
-
-  local run = data.runs[run_idx]
-  if not run or not run.jobs then
-    return
-  end
-
-  local job = run.jobs[job_idx]
-  if not job then
-    return
-  end
-
-  -- Check if workflow run itself is still in progress
-  -- Even if individual jobs are completed, logs are only available when the entire run completes
-  if run.status == 'in_progress' or run.status == 'queued' then
-    local message = string.format(
-      'Workflow run #%d is still %s. Logs will be available when the entire workflow completes.',
-      run.databaseId,
-      run.status == 'in_progress' and 'running' or 'queued'
-    )
-    vim.schedule(function()
-      vim.notify('[GitHub Actions] ' .. message, vim.log.levels.WARN)
-    end)
-    return
-  end
-
-  -- Check if job is still in progress or queued
-  -- If so, don't open log buffer at all
-  if job.status == 'in_progress' or job.status == 'queued' then
-    local message = string.format(
-      'Job "%s" is still %s. Logs will be available when it completes.',
-      job.name,
-      job.status == 'in_progress' and 'running' or 'queued'
-    )
-    vim.schedule(function()
-      vim.notify('[GitHub Actions] ' .. message, vim.log.levels.WARN)
-    end)
-    return
-  end
-
-  -- Create or reuse log buffer
-  local logs_buffer = require('github-actions.history.ui.logs_buffer')
-  local log_parser = require('github-actions.history.log_parser')
-  local github_actions = require('github-actions')
-  local config = github_actions.get_config()
-
-  local title = string.format('Job: %s', job.name)
-  local log_bufnr, _ = logs_buffer.create_buffer(title, run.databaseId, config.history)
-
-  -- Check cache first
-  local cached_formatted, _ = logs_buffer.get_cached_logs(run.databaseId, job.databaseId)
-  if cached_formatted then
-    -- Use cached logs
-    logs_buffer.render(log_bufnr, cached_formatted)
-    return
-  end
-
-  -- Show loading indicator only for new fetches
-  logs_buffer.render(log_bufnr, 'Loading logs...')
-
-  -- Fetch logs for the entire job
-  history.fetch_logs(run.databaseId, job.databaseId, function(logs, err)
-    vim.schedule(function()
-      if err then
-        logs_buffer.render(log_bufnr, 'Failed to fetch logs: ' .. err)
-        vim.notify('[GitHub Actions] Failed to fetch logs: ' .. err, vim.log.levels.ERROR)
-        return
-      end
-
-      -- Parse and format logs, removing ANSI escape sequences
-      local formatted_logs = log_parser.parse(logs or '')
-
-      -- Cache both raw and formatted logs
-      logs_buffer.cache_logs(run.databaseId, job.databaseId, formatted_logs or 'No logs available', logs or '')
-
-      -- Render the logs
-      logs_buffer.render(log_bufnr, formatted_logs or 'No logs available')
-    end)
-  end)
-end
-
 ---Toggle expand/collapse for run at cursor, or view logs for job
 ---@param bufnr number Buffer number
 local function toggle_expand(bufnr)
@@ -185,7 +96,11 @@ local function toggle_expand(bufnr)
   local job_run_idx, job_idx = cursor_tracker.get_job_at_cursor(bufnr, data.runs)
   if job_run_idx and job_idx then
     -- Cursor is on a job, view logs for entire job
-    view_job_logs(bufnr, job_run_idx, job_idx)
+    local run = data.runs[job_run_idx]
+    local job = run and run.jobs and run.jobs[job_idx]
+    if run and job then
+      log_viewer.view_logs(run, job)
+    end
     return
   end
 
