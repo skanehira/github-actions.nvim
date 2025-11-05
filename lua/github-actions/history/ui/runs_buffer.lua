@@ -2,6 +2,7 @@ local formatter = require('github-actions.history.ui.formatter')
 local history = require('github-actions.history.api')
 local buffer_utils = require('github-actions.shared.buffer_utils')
 local highlighter = require('github-actions.history.ui.highlighter')
+local cursor_tracker = require('github-actions.history.ui.cursor_tracker')
 
 local M = {}
 
@@ -80,85 +81,6 @@ function M.create_buffer(workflow_file, open_in_new_tab)
   return bufnr, winnr
 end
 
----Get run index from cursor line
----@param bufnr number Buffer number
----@return number|nil run_idx Run index (1-based) or nil if not on a run line
-local function get_run_at_cursor(bufnr)
-  local cursor = vim.api.nvim_win_get_cursor(0)
-  local line_idx = cursor[1] - 1 -- Convert to 0-based
-
-  local data = buffer_data[bufnr]
-  if not data or not data.runs then
-    return nil
-  end
-
-  -- Find which run this line belongs to
-  local current_line = 0 -- First run starts at line 0 (0-based)
-  for run_idx, run in ipairs(data.runs) do
-    if line_idx == current_line then
-      return run_idx
-    end
-
-    current_line = current_line + 1
-
-    -- Count expanded lines for this run
-    if run.expanded and run.jobs then
-      for _, job in ipairs(run.jobs) do
-        current_line = current_line + 1
-        if job.steps then
-          current_line = current_line + #job.steps
-        end
-      end
-    end
-  end
-
-  return nil
-end
-
----Get job at cursor position
----@param bufnr number Buffer number
----@return number|nil run_idx Index of the run
----@return number|nil job_idx Index of the job
-local function get_job_at_cursor(bufnr)
-  local cursor = vim.api.nvim_win_get_cursor(0)
-  local line_idx = cursor[1] - 1
-
-  local data = buffer_data[bufnr]
-  if not data or not data.runs then
-    return nil, nil
-  end
-
-  local current_line = 0 -- First run starts at line 0
-
-  for run_idx, run in ipairs(data.runs) do
-    if line_idx == current_line then
-      -- Cursor is on run line
-      return nil, nil
-    end
-
-    current_line = current_line + 1
-
-    -- Check expanded lines for this run
-    if run.expanded and run.jobs then
-      for job_idx, job in ipairs(run.jobs) do
-        if line_idx == current_line then
-          -- Cursor is on job line
-          return run_idx, job_idx
-        end
-
-        current_line = current_line + 1
-
-        if job.steps then
-          for _, _ in ipairs(job.steps) do
-            current_line = current_line + 1
-          end
-        end
-      end
-    end
-  end
-
-  return nil, nil
-end
 
 ---Show loading indicator on current line using virtual text
 ---@param bufnr number Buffer number
@@ -281,8 +203,13 @@ end
 ---Toggle expand/collapse for run at cursor, or view logs for job
 ---@param bufnr number Buffer number
 local function toggle_expand(bufnr)
+  local data = buffer_data[bufnr]
+  if not data or not data.runs then
+    return
+  end
+
   -- First, check if cursor is on a job
-  local job_run_idx, job_idx = get_job_at_cursor(bufnr)
+  local job_run_idx, job_idx = cursor_tracker.get_job_at_cursor(bufnr, data.runs)
   if job_run_idx and job_idx then
     -- Cursor is on a job, view logs for entire job
     view_job_logs(bufnr, job_run_idx, job_idx)
@@ -290,13 +217,8 @@ local function toggle_expand(bufnr)
   end
 
   -- Not on a job, check if on a run
-  local run_idx = get_run_at_cursor(bufnr)
+  local run_idx = cursor_tracker.get_run_at_cursor(bufnr, data.runs)
   if not run_idx then
-    return
-  end
-
-  local data = buffer_data[bufnr]
-  if not data or not data.runs then
     return
   end
 
@@ -402,13 +324,13 @@ function M.setup_keymaps(bufnr)
 
   -- Collapse with <BS>
   vim.keymap.set('n', '<BS>', function()
-    local run_idx = get_run_at_cursor(bufnr)
-    if not run_idx then
+    local data = buffer_data[bufnr]
+    if not data or not data.runs then
       return
     end
 
-    local data = buffer_data[bufnr]
-    if not data or not data.runs then
+    local run_idx = cursor_tracker.get_run_at_cursor(bufnr, data.runs)
+    if not run_idx then
       return
     end
 
