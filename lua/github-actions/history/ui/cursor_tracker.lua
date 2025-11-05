@@ -37,11 +37,10 @@ function M.get_run_at_cursor(bufnr, runs)
 end
 
 ---Get job at cursor position
----@param bufnr number Buffer number
 ---@param runs table[] List of run objects
 ---@return number|nil run_idx Index of the run
 ---@return number|nil job_idx Index of the job
-function M.get_job_at_cursor(bufnr, runs)
+function M.get_job_at_cursor(runs)
   local cursor = vim.api.nvim_win_get_cursor(0)
   local line_idx = cursor[1] - 1
 

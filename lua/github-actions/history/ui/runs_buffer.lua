@@ -83,7 +83,6 @@ function M.create_buffer(workflow_file, open_in_new_tab)
   return bufnr, winnr
 end
 
-
 ---Toggle expand/collapse for run at cursor, or view logs for job
 ---@param bufnr number Buffer number
 local function toggle_expand(bufnr)
@@ -93,7 +92,7 @@ local function toggle_expand(bufnr)
   end
 
   -- First, check if cursor is on a job
-  local job_run_idx, job_idx = cursor_tracker.get_job_at_cursor(bufnr, data.runs)
+  local job_run_idx, job_idx = cursor_tracker.get_job_at_cursor(data.runs)
   if job_run_idx and job_idx then
     -- Cursor is on a job, view logs for entire job
     local run = data.runs[job_run_idx]

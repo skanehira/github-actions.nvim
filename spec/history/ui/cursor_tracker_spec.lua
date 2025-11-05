@@ -116,13 +116,13 @@ describe('history.ui.cursor_tracker', function()
 
       -- Cursor on first job
       vim.api.nvim_win_set_cursor(0, { 2, 0 })
-      local run_idx, job_idx = cursor_tracker.get_job_at_cursor(bufnr, runs)
+      local run_idx, job_idx = cursor_tracker.get_job_at_cursor(runs)
       assert.equals(1, run_idx)
       assert.equals(1, job_idx)
 
       -- Cursor on second job
       vim.api.nvim_win_set_cursor(0, { 3, 0 })
-      run_idx, job_idx = cursor_tracker.get_job_at_cursor(bufnr, runs)
+      run_idx, job_idx = cursor_tracker.get_job_at_cursor(runs)
       assert.equals(1, run_idx)
       assert.equals(2, job_idx)
     end)
@@ -147,7 +147,7 @@ describe('history.ui.cursor_tracker', function()
 
       -- Cursor on run line
       vim.api.nvim_win_set_cursor(0, { 1, 0 })
-      local run_idx, job_idx = cursor_tracker.get_job_at_cursor(bufnr, runs)
+      local run_idx, job_idx = cursor_tracker.get_job_at_cursor(runs)
       assert.is_nil(run_idx)
       assert.is_nil(job_idx)
     end)
@@ -176,7 +176,7 @@ describe('history.ui.cursor_tracker', function()
 
       -- Cursor on second job (should skip over job1's steps)
       vim.api.nvim_win_set_cursor(0, { 5, 0 })
-      local run_idx, job_idx = cursor_tracker.get_job_at_cursor(bufnr, runs)
+      local run_idx, job_idx = cursor_tracker.get_job_at_cursor(runs)
       assert.equals(1, run_idx)
       assert.equals(2, job_idx)
     end)
@@ -189,7 +189,7 @@ describe('history.ui.cursor_tracker', function()
       vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'No runs' })
       vim.api.nvim_win_set_cursor(0, { 1, 0 })
 
-      local run_idx, job_idx = cursor_tracker.get_job_at_cursor(bufnr, runs)
+      local run_idx, job_idx = cursor_tracker.get_job_at_cursor(runs)
       assert.is_nil(run_idx)
       assert.is_nil(job_idx)
     end)
