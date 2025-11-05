@@ -128,7 +128,12 @@ When running these commands outside of a workflow file, a picker will appear to 
 1. Press `<CR>` on a workflow run to expand/collapse jobs and steps
 2. Press `<CR>` on a job to view its logs in a new buffer
 3. Press `<BS>` to collapse an expanded run
-4. Press `q` to close the history buffer
+4. Press `R` to refresh the workflow run history
+5. Press `W` to watch a running workflow (only for in_progress or queued runs)
+   - Opens a terminal running `gh run watch <run-id>`
+   - Returns focus to history buffer in normal mode
+   - Auto-refreshes history when watch completes
+6. Press `q` to close the history buffer
 
 #### Log Buffer
 

@@ -268,6 +268,15 @@ The workflow history buffer provides these keymaps:
 
     <BS>        Collapse the expanded run
 
+    R           Refresh the workflow run history
+                Fetches the latest runs from GitHub API
+
+    W           Watch a running workflow
+                - Only available for in_progress or queued runs
+                - Opens a terminal running `gh run watch <run-id>`
+                - Returns focus to history buffer in normal mode
+                - Auto-refreshes history when watch completes
+
     q           Close the history buffer
 
 8.3 Log Buffer~
