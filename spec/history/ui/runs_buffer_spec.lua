@@ -166,6 +166,60 @@ describe('history.ui.runs_buffer', function()
     end)
   end)
 
+  describe('buffer reuse behavior', function()
+    it('should not switch windows when buffer is already displayed', function()
+      -- Create initial buffer in first tab
+      local bufnr1, winnr1 = runs_buffer.create_buffer('test.yml')
+      assert.is_not_nil(bufnr1)
+      assert.is_not_nil(winnr1)
+      local initial_tab = vim.api.nvim_get_current_tabpage()
+
+      -- Create a new tab and switch to it
+      vim.cmd('tabnew')
+      local new_tab = vim.api.nvim_get_current_tabpage()
+      local new_winnr = vim.api.nvim_get_current_win()
+
+      -- Verify we're in a different tab
+      assert.is_not.equals(initial_tab, new_tab)
+
+      -- Call create_buffer again from the new tab
+      -- This should NOT switch back to the first tab/window
+      local bufnr2, winnr2 = runs_buffer.create_buffer('test.yml')
+
+      -- Should return the same buffer
+      assert.equals(bufnr1, bufnr2)
+
+      -- winnr2 should be the window in the first tab where the buffer is displayed
+      assert.is_not_nil(winnr2)
+
+      -- Most important: Current tab and window should remain unchanged
+      local current_tab = vim.api.nvim_get_current_tabpage()
+      local current_winnr = vim.api.nvim_get_current_win()
+      assert.equals(new_tab, current_tab, 'Should still be in the new tab')
+      assert.equals(new_winnr, current_winnr, 'Should still be in the new window')
+
+      -- Verify that the buffer is indeed displayed in winnr2
+      local buf_in_win = vim.api.nvim_win_get_buf(winnr2)
+      assert.equals(bufnr1, buf_in_win)
+    end)
+
+    it('should create new window when buffer exists but not displayed', function()
+      -- Create buffer
+      local bufnr1, _ = runs_buffer.create_buffer('test.yml', false)
+
+      -- Hide the buffer (wipe it by closing all windows in the tab)
+      vim.cmd('bdelete! ' .. bufnr1)
+
+      -- Create the buffer again - should create new buffer since old one was wiped
+      local bufnr2, winnr2 = runs_buffer.create_buffer('test.yml')
+
+      assert.is_not_nil(bufnr2)
+      assert.is_not_nil(winnr2)
+      assert.is_true(vim.api.nvim_buf_is_valid(bufnr2))
+      assert.is_true(vim.api.nvim_win_is_valid(winnr2))
+    end)
+  end)
+
   describe('render with expanded runs', function()
     it('should render expanded jobs and steps', function()
       local bufnr = runs_buffer.create_buffer('test.yml')
