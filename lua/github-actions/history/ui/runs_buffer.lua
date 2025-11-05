@@ -1,26 +1,12 @@
 local formatter = require('github-actions.history.ui.formatter')
 local history = require('github-actions.history.api')
+local buffer_utils = require('github-actions.shared.buffer_utils')
 
 local M = {}
 
 -- Store buffer-specific data
 -- bufnr -> { runs = {...}, custom_icons = {...}, custom_highlights = {...} }
 local buffer_data = {}
-
----Find window displaying the specified buffer across all tab pages
----@param bufnr number Buffer number to find
----@return number|nil winid Window ID where buffer is displayed, or nil if not found
-local function find_window_for_buffer(bufnr)
-  -- Search through all tab pages
-  for _, tabpage in ipairs(vim.api.nvim_list_tabpages()) do
-    for _, winid in ipairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
-      if vim.api.nvim_win_get_buf(winid) == bufnr then
-        return winid
-      end
-    end
-  end
-  return nil
-end
 
 ---Create a new buffer for displaying workflow run history
 ---@param workflow_file string Workflow file name (e.g., "ci.yml")
@@ -38,7 +24,7 @@ function M.create_buffer(workflow_file, open_in_new_tab)
   local existing_bufnr = vim.fn.bufnr(bufname)
   if existing_bufnr ~= -1 and vim.api.nvim_buf_is_valid(existing_bufnr) then
     -- Buffer exists, find its window across all tab pages
-    local winid = find_window_for_buffer(existing_bufnr)
+    local winid = buffer_utils.find_window_for_buffer(existing_bufnr)
     if winid then
       -- Buffer is already displayed in a window
       -- Return the buffer and window where it's displayed without switching to it

@@ -1,3 +1,5 @@
+local buffer_utils = require('github-actions.shared.buffer_utils')
+
 ---@class LogsBuffer
 local M = {}
 
@@ -12,44 +14,13 @@ local function get_buffer_name(title, run_id)
   return string.format('GitHub Actions - Logs: %s (#%d)', title, run_id)
 end
 
----Find buffer by name
----@param bufname string Buffer name to find
----@return number|nil bufnr Buffer number if found, nil otherwise
-local function find_buffer_by_name(bufname)
-  -- First try using vim.fn.bufnr which searches all buffers including hidden ones
-  local bufnr = vim.fn.bufnr('^' .. vim.fn.escape(bufname, '^$.*[]~\\') .. '$')
-  if bufnr ~= -1 and vim.api.nvim_buf_is_valid(bufnr) then
-    return bufnr
-  end
-
-  -- Fallback: search through all buffers
-  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_get_name(buf) == bufname then
-      return buf
-    end
-  end
-  return nil
-end
-
----Find window displaying a buffer
----@param bufnr number Buffer number
----@return number|nil winnr Window number if found, nil otherwise
-local function find_window_for_buffer(bufnr)
-  for _, winnr in ipairs(vim.api.nvim_list_wins()) do
-    if vim.api.nvim_win_is_valid(winnr) and vim.api.nvim_win_get_buf(winnr) == bufnr then
-      return winnr
-    end
-  end
-  return nil
-end
-
 ---Focus on window or create new split with buffer
 ---@param bufnr number Buffer number
 ---@param opts? table Options for window/buffer setup
 ---@return number winnr Window number
 local function focus_or_create_window(bufnr, opts)
   -- Check if buffer is already displayed in a window
-  local existing_winnr = find_window_for_buffer(bufnr)
+  local existing_winnr = buffer_utils.find_window_for_buffer(bufnr)
   if existing_winnr then
     -- Focus on existing window
     vim.api.nvim_set_current_win(existing_winnr)
@@ -115,7 +86,7 @@ function M.create_buffer(title, run_id, opts)
   local bufname = get_buffer_name(title, run_id)
 
   -- Check if buffer already exists
-  local existing_bufnr = find_buffer_by_name(bufname)
+  local existing_bufnr = buffer_utils.find_buffer_by_name(bufname)
   if existing_bufnr then
     -- Buffer exists, focus on it or create window for it
     local winnr = focus_or_create_window(existing_bufnr, opts)
@@ -130,7 +101,7 @@ function M.create_buffer(title, run_id, opts)
   if not success then
     -- Buffer name already exists, delete the new buffer and find the existing one
     vim.api.nvim_buf_delete(bufnr, { force = true })
-    existing_bufnr = find_buffer_by_name(bufname)
+    existing_bufnr = buffer_utils.find_buffer_by_name(bufname)
     if existing_bufnr then
       local winnr = focus_or_create_window(existing_bufnr, opts)
       return existing_bufnr, winnr, true
