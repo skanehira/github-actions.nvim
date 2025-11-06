@@ -7,25 +7,29 @@ local github = require('github-actions.shared.github')
 local git = require('github-actions.lib.git')
 local detector = require('github-actions.shared.workflow')
 local picker = require('github-actions.shared.picker')
+local branch_picker = require('github-actions.dispatch.branch_picker')
 
 ---Handle branch selection callback
 ---@param workflow_file string Workflow filename
 ---@param inputs table Workflow inputs configuration
----@param selected_branch string|nil Selected branch
+---@param selected_branch string|nil Selected branch (with origin/ prefix)
 local function handle_branch_selection(workflow_file, inputs, selected_branch)
   if not selected_branch then
     return
   end
 
+  -- Normalize branch name by removing origin/ prefix for GitHub API
+  local normalized_branch = git.normalize_branch_name(selected_branch)
+
   -- Collect inputs and dispatch
   input.collect_inputs(inputs, {
     on_success = function(collected_inputs)
       -- Dispatch workflow
-      github.dispatch_workflow(workflow_file, selected_branch, collected_inputs, function(success, err)
+      github.dispatch_workflow(workflow_file, normalized_branch, collected_inputs, function(success, err)
         vim.schedule(function()
           if success then
             vim.notify(
-              string.format('Workflow "%s" dispatched successfully on branch "%s"', workflow_file, selected_branch),
+              string.format('Workflow "%s" dispatched successfully on branch "%s"', workflow_file, normalized_branch),
               vim.log.levels.INFO
             )
           else
@@ -59,19 +63,13 @@ local function dispatch_workflow_for_file(workflow_filepath)
     return
   end
 
-  -- Get available branches
-  local branches = git.get_branches()
-  if #branches == 0 then
-    vim.notify('Failed to get git branches', vim.log.levels.ERROR)
-    return
-  end
-
-  -- Ask user to select branch
-  vim.ui.select(branches, {
+  -- Ask user to select remote branch using the new branch picker
+  branch_picker.select_branch({
     prompt = 'Select branch to run workflow on:',
-  }, function(selected_branch)
-    handle_branch_selection(workflow_file, workflow_dispatch.inputs, selected_branch)
-  end)
+    on_select = function(selected_branch)
+      handle_branch_selection(workflow_file, workflow_dispatch.inputs, selected_branch)
+    end,
+  })
 end
 
 ---Dispatch workflow with user interaction

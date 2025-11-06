@@ -1,6 +1,8 @@
 ---@class DispatchParser
 local M = {}
 
+---@alias TSNode userdata Treesitter node
+
 ---@class WorkflowDispatchInput
 ---@field name string Input parameter name
 ---@field description? string Input description

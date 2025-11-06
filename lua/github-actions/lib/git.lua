@@ -19,6 +19,31 @@ function M.parse_branches(stdout)
   return branches
 end
 
+---Parse git branches from git command output and return remote branches only
+---@param stdout string Output from git branch command
+---@return string[] branches List of remote branch names
+function M.parse_remote_branches(stdout)
+  local branches = {}
+
+  for branch in stdout:gmatch('[^\n]+') do
+    -- Remove any whitespace
+    branch = vim.trim(branch)
+    -- Only include origin/* branches, skip HEAD references
+    if branch ~= '' and branch:match('^origin/') and not branch:match('HEAD') then
+      table.insert(branches, branch)
+    end
+  end
+
+  return branches
+end
+
+---Normalize branch name by removing origin/ prefix
+---@param branch string Branch name (e.g., "origin/main" or "main")
+---@return string normalized Normalized branch name (e.g., "main")
+function M.normalize_branch_name(branch)
+  return branch:gsub('^origin/', '')
+end
+
 ---Sort branches with default branch first
 ---@param branches string[] List of branches
 ---@param default_branch string Name of default branch
@@ -78,6 +103,30 @@ function M.get_branches()
   local default_branch = 'main' -- Fallback
   if default_exit_code == 0 then
     default_branch = default_stdout:gsub('^refs/remotes/origin/', ''):gsub('%s+$', '')
+  end
+
+  -- Sort branches with default first
+  branches = M.sort_branches_by_default(branches, default_branch)
+
+  return branches
+end
+
+---Get available remote branches (origin/*)
+---@return string[] branches List of remote branches with default branch first
+function M.get_remote_branches()
+  -- Get remote branches only
+  local stdout, exit_code = M.execute_git_command({ 'git', 'branch', '-r', '--format=%(refname:short)' })
+  if exit_code ~= 0 then
+    return {}
+  end
+
+  local branches = M.parse_remote_branches(stdout)
+
+  -- Get default branch
+  local default_stdout, default_exit_code = M.execute_git_command({ 'git', 'symbolic-ref', 'refs/remotes/origin/HEAD' })
+  local default_branch = 'origin/main' -- Fallback with origin/ prefix
+  if default_exit_code == 0 then
+    default_branch = default_stdout:gsub('^refs/remotes/', ''):gsub('%s+$', '')
   end
 
   -- Sort branches with default first

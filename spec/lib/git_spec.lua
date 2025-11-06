@@ -90,6 +90,85 @@ origin/main
     end)
   end)
 
+  describe('parse_remote_branches', function()
+    it('should parse remote branches only', function()
+      local stdout = [[
+origin/main
+origin/develop
+origin/feature/test
+]]
+      local branches = git.parse_remote_branches(stdout)
+
+      assert.equals(3, #branches)
+      assert.same({ 'origin/main', 'origin/develop', 'origin/feature/test' }, branches)
+    end)
+
+    it('should exclude HEAD reference', function()
+      local stdout = [[
+origin/HEAD -> origin/main
+origin/main
+origin/develop
+]]
+      local branches = git.parse_remote_branches(stdout)
+
+      assert.equals(2, #branches)
+      assert.same({ 'origin/main', 'origin/develop' }, branches)
+    end)
+
+    it('should exclude local branches', function()
+      local stdout = [[
+main
+develop
+origin/main
+origin/develop
+]]
+      local branches = git.parse_remote_branches(stdout)
+
+      assert.equals(2, #branches)
+      assert.same({ 'origin/main', 'origin/develop' }, branches)
+    end)
+
+    it('should handle empty output', function()
+      local stdout = ''
+      local branches = git.parse_remote_branches(stdout)
+
+      assert.equals(0, #branches)
+    end)
+
+    it('should trim whitespace', function()
+      local stdout = [[
+  origin/main
+  origin/develop
+]]
+      local branches = git.parse_remote_branches(stdout)
+
+      assert.equals(2, #branches)
+      assert.same({ 'origin/main', 'origin/develop' }, branches)
+    end)
+  end)
+
+  describe('normalize_branch_name', function()
+    it('should remove origin/ prefix', function()
+      local result = git.normalize_branch_name('origin/main')
+      assert.equals('main', result)
+    end)
+
+    it('should handle nested branch names', function()
+      local result = git.normalize_branch_name('origin/feature/test')
+      assert.equals('feature/test', result)
+    end)
+
+    it('should handle branch without prefix', function()
+      local result = git.normalize_branch_name('main')
+      assert.equals('main', result)
+    end)
+
+    it('should handle empty string', function()
+      local result = git.normalize_branch_name('')
+      assert.equals('', result)
+    end)
+  end)
+
   describe('get_branches', function()
     it('should return branches with default first', function()
       local stub = require('luassert.stub')
@@ -154,6 +233,76 @@ feature/test
       end)
 
       local branches = git.get_branches()
+
+      assert.equals(2, #branches)
+
+      assert.stub(git.execute_git_command).was_called(2)
+    end)
+  end)
+
+  describe('get_remote_branches', function()
+    it('should return remote branches with default first', function()
+      local stub = require('luassert.stub')
+
+      local call_count = 0
+      stub(git, 'execute_git_command')
+      git.execute_git_command.invokes(function(_)
+        call_count = call_count + 1
+        if call_count == 1 then
+          -- First call: get remote branches
+          return [[
+origin/develop
+origin/main
+origin/feature/test
+origin/HEAD -> origin/main
+]], 0, ''
+        else
+          -- Second call: get default branch
+          return 'refs/remotes/origin/main\n', 0, ''
+        end
+      end)
+
+      local branches = git.get_remote_branches()
+
+      assert.equals(3, #branches)
+      assert.equals('origin/main', branches[1]) -- Default branch should be first
+      assert.is_true(vim.tbl_contains(branches, 'origin/develop'))
+      assert.is_true(vim.tbl_contains(branches, 'origin/feature/test'))
+
+      assert.stub(git.execute_git_command).was_called(2)
+    end)
+
+    it('should handle git command failure', function()
+      local stub = require('luassert.stub')
+
+      stub(git, 'execute_git_command')
+      git.execute_git_command.returns('', 1, 'error message')
+
+      local branches = git.get_remote_branches()
+
+      assert.equals(0, #branches)
+
+      assert.stub(git.execute_git_command).was_called()
+    end)
+
+    it('should fallback to origin/main when default branch not found', function()
+      local stub = require('luassert.stub')
+
+      local call_count = 0
+      stub(git, 'execute_git_command')
+      git.execute_git_command.invokes(function(_)
+        call_count = call_count + 1
+        if call_count == 1 then
+          return [[
+origin/develop
+origin/feature/test
+]], 0, ''
+        else
+          return '', 1, 'error' -- Failed to get default branch
+        end
+      end)
+
+      local branches = git.get_remote_branches()
 
       assert.equals(2, #branches)
 

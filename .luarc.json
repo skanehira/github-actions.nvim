@@ -1,0 +1,37 @@
+{
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "runtime": {
+    "version": "LuaJIT",
+    "path": [
+      "lua/?.lua",
+      "lua/?/init.lua"
+    ]
+  },
+  "diagnostics": {
+    "globals": [
+      "vim"
+    ],
+    "disable": [
+      "lowercase-global",
+      "undefined-field",
+      "undefined-global"
+    ]
+  },
+  "workspace": {
+    "library": [
+      "/usr/local/share/nvim/runtime/lua",
+      "${3rd}/luv/library",
+      "${3rd}/busted/library"
+    ],
+    "checkThirdParty": false
+  },
+  "completion": {
+    "callSnippet": "Replace"
+  },
+  "telemetry": {
+    "enable": false
+  },
+  "type": {
+    "castNumberToInteger": true
+  }
+}
