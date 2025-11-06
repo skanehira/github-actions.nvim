@@ -192,6 +192,90 @@ on: push
       notify_stub:revert()
     end)
 
+    it('should show loading screen before fetching workflow runs', function()
+      -- Create a test workflow file
+      local workflow_content = [[
+name: CI
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "test"
+]]
+      local bufnr = buffer_helper.create_yaml_buffer(workflow_content)
+      local bufname = '.github/workflows/ci.yml'
+      vim.api.nvim_buf_set_name(bufnr, bufname)
+
+      local history_buf = nil
+      local loading_content = nil
+
+      -- Mock gh CLI response with delay to capture loading state
+      local mock_runs = [[
+[
+  {
+    "databaseId": 12345,
+    "displayTitle": "feat: add feature",
+    "headBranch": "main",
+    "status": "completed",
+    "conclusion": "success",
+    "createdAt": "2025-10-19T10:00:00Z",
+    "updatedAt": "2025-10-19T10:05:00Z"
+  }
+]
+]]
+
+      -- Stub vim.system to return mock data after delay
+      local system_stub = stub(vim, 'system')
+      system_stub.invokes(function(cmd, _, callback)
+        if cmd[1] == 'gh' and cmd[2] == 'run' and cmd[3] == 'list' then
+          -- First, capture the loading state
+          vim.schedule(function()
+            -- Find history buffer
+            for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+              if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == 'nofile' then
+                local name = vim.api.nvim_buf_get_name(buf)
+                if name:match('Run History') then
+                  history_buf = buf
+                  -- Capture buffer content while loading
+                  loading_content = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), '\n')
+                  break
+                end
+              end
+            end
+          end)
+
+          -- Then return the actual data
+          vim.schedule(function()
+            callback({
+              code = 0,
+              stdout = mock_runs,
+              stderr = '',
+            })
+          end)
+        end
+      end)
+
+      -- Call show_history
+      history.show_history(bufnr, {})
+      flush_scheduled()
+
+      -- Verify history buffer was created
+      assert.is.not_nil(history_buf, 'History buffer should be created')
+
+      -- Verify loading message was shown
+      assert.is.not_nil(loading_content, 'Loading content should be captured')
+      assert.matches('Loading workflow runs', loading_content)
+
+      -- Verify final content contains the run (loading message replaced)
+      local final_lines = vim.api.nvim_buf_get_lines(history_buf, 0, -1, false)
+      local final_content = table.concat(final_lines, '\n')
+      assert.matches('#12345', final_content)
+      assert.matches('feat: add feature', final_content)
+
+      system_stub:revert()
+    end)
+
     it('should open multiple tabs when multiple workflow files are selected', function()
       -- Create a non-workflow buffer (so it triggers file selection)
       local bufnr = vim.api.nvim_create_buf(false, true)

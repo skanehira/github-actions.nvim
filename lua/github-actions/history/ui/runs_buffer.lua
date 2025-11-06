@@ -315,6 +315,18 @@ local function apply_highlights(bufnr, runs, custom_highlights)
   highlighter.apply_highlights(bufnr, runs, highlights)
 end
 
+---Show loading message in buffer
+---@param bufnr number Buffer number
+function M.show_loading(bufnr)
+  if not vim.api.nvim_buf_is_valid(bufnr) then
+    return
+  end
+
+  vim.bo[bufnr].modifiable = true
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'Loading workflow runs...' })
+  vim.bo[bufnr].modifiable = false
+end
+
 ---Render run list in the buffer
 ---@param bufnr number Buffer number
 ---@param runs table[] List of run objects
