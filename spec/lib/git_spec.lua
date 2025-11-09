@@ -100,7 +100,7 @@ origin/feature/test
       local branches = git.parse_remote_branches(stdout)
 
       assert.equals(3, #branches)
-      assert.same({ 'origin/main', 'origin/develop', 'origin/feature/test' }, branches)
+      assert.same({ 'main', 'develop', 'feature/test' }, branches)
     end)
 
     it('should exclude HEAD reference', function()
@@ -112,7 +112,7 @@ origin/develop
       local branches = git.parse_remote_branches(stdout)
 
       assert.equals(2, #branches)
-      assert.same({ 'origin/main', 'origin/develop' }, branches)
+      assert.same({ 'main', 'develop' }, branches)
     end)
 
     it('should exclude local branches', function()
@@ -125,7 +125,7 @@ origin/develop
       local branches = git.parse_remote_branches(stdout)
 
       assert.equals(2, #branches)
-      assert.same({ 'origin/main', 'origin/develop' }, branches)
+      assert.same({ 'main', 'develop' }, branches)
     end)
 
     it('should handle empty output', function()
@@ -143,7 +143,7 @@ origin/develop
       local branches = git.parse_remote_branches(stdout)
 
       assert.equals(2, #branches)
-      assert.same({ 'origin/main', 'origin/develop' }, branches)
+      assert.same({ 'main', 'develop' }, branches)
     end)
   end)
 
@@ -265,9 +265,9 @@ origin/HEAD -> origin/main
       local branches = git.get_remote_branches()
 
       assert.equals(3, #branches)
-      assert.equals('origin/main', branches[1]) -- Default branch should be first
-      assert.is_true(vim.tbl_contains(branches, 'origin/develop'))
-      assert.is_true(vim.tbl_contains(branches, 'origin/feature/test'))
+      assert.equals('main', branches[1]) -- Default branch should be first
+      assert.is_true(vim.tbl_contains(branches, 'develop'))
+      assert.is_true(vim.tbl_contains(branches, 'feature/test'))
 
       assert.stub(git.execute_git_command).was_called(2)
     end)

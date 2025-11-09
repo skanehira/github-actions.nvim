@@ -21,7 +21,7 @@ end
 
 ---Parse git branches from git command output and return remote branches only
 ---@param stdout string Output from git branch command
----@return string[] branches List of remote branch names
+---@return string[] branches List of remote branch names (without origin/ prefix)
 function M.parse_remote_branches(stdout)
   local branches = {}
 
@@ -30,7 +30,9 @@ function M.parse_remote_branches(stdout)
     branch = vim.trim(branch)
     -- Only include origin/* branches, skip HEAD references
     if branch ~= '' and branch:match('^origin/') and not branch:match('HEAD') then
-      table.insert(branches, branch)
+      -- Remove origin/ prefix
+      local normalized = branch:gsub('^origin/', '')
+      table.insert(branches, normalized)
     end
   end
 
@@ -112,7 +114,7 @@ function M.get_branches()
 end
 
 ---Get available remote branches (origin/*)
----@return string[] branches List of remote branches with default branch first
+---@return string[] branches List of remote branches (without origin/ prefix) with default branch first
 function M.get_remote_branches()
   -- Get remote branches only
   local stdout, exit_code = M.execute_git_command({ 'git', 'branch', '-r', '--format=%(refname:short)' })
@@ -124,9 +126,9 @@ function M.get_remote_branches()
 
   -- Get default branch
   local default_stdout, default_exit_code = M.execute_git_command({ 'git', 'symbolic-ref', 'refs/remotes/origin/HEAD' })
-  local default_branch = 'origin/main' -- Fallback with origin/ prefix
+  local default_branch = 'main' -- Fallback without origin/ prefix
   if default_exit_code == 0 then
-    default_branch = default_stdout:gsub('^refs/remotes/', ''):gsub('%s+$', '')
+    default_branch = default_stdout:gsub('^refs/remotes/origin/', ''):gsub('%s+$', '')
   end
 
   -- Sort branches with default first

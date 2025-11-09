@@ -21,7 +21,7 @@ describe('branch_picker', function()
 
       -- Stub get_remote_branches to return test branches
       stub(git, 'get_remote_branches')
-      git.get_remote_branches.returns({ 'origin/main', 'origin/develop', 'origin/feature/test' })
+      git.get_remote_branches.returns({ 'main', 'develop', 'feature/test' })
 
       -- Stub vim.ui.select to simulate user selection
       local original_select = vim.ui.select
@@ -45,7 +45,7 @@ describe('branch_picker', function()
 
       -- Verify callback was called with correct branch
       assert.is_true(callback_called)
-      assert.equals('origin/main', callback_branch)
+      assert.equals('main', callback_branch)
 
       -- Cleanup
       vim.ui.select = original_select
@@ -57,7 +57,7 @@ describe('branch_picker', function()
       local stub = require('luassert.stub')
 
       stub(git, 'get_remote_branches')
-      git.get_remote_branches.returns({ 'origin/main', 'origin/develop' })
+      git.get_remote_branches.returns({ 'main', 'develop' })
 
       local original_select = vim.ui.select
       vim.ui.select = function(items, opts, on_choice)
@@ -127,7 +127,7 @@ describe('branch_picker', function()
       local stub = require('luassert.stub')
 
       stub(git, 'get_remote_branches')
-      git.get_remote_branches.returns({ 'origin/main' })
+      git.get_remote_branches.returns({ 'main' })
 
       local original_select = vim.ui.select
       local captured_opts = nil
