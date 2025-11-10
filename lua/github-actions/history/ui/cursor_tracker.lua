@@ -14,7 +14,8 @@ function M.get_run_at_cursor(bufnr, runs)
   end
 
   -- Find which run this line belongs to
-  local current_line = 0 -- First run starts at line 0 (0-based)
+  -- First run starts at line 2 (0-based) due to keymap help text and empty line at the top
+  local current_line = 2
   for run_idx, run in ipairs(runs) do
     if line_idx == current_line then
       return run_idx
@@ -48,7 +49,8 @@ function M.get_job_at_cursor(runs)
     return nil, nil
   end
 
-  local current_line = 0 -- First run starts at line 0
+  -- First run starts at line 2 (0-based) due to keymap help text and empty line at the top
+  local current_line = 2
 
   for run_idx, run in ipairs(runs) do
     if line_idx == current_line then

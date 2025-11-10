@@ -347,6 +347,13 @@ function M.render(bufnr, runs, custom_icons, custom_highlights)
 
   local lines = {}
 
+  -- Add keymap help text at the top
+  table.insert(
+    lines,
+    'Press <CR> to expand run / view job logs, <BS> to collapse, R to refresh, W to watch run, q to close'
+  )
+  table.insert(lines, '')
+
   if #runs == 0 then
     table.insert(lines, 'No workflow runs found.')
   else
@@ -370,12 +377,6 @@ function M.render(bufnr, runs, custom_icons, custom_highlights)
       end
     end
   end
-
-  table.insert(lines, '')
-  table.insert(
-    lines,
-    'Press <CR> to expand run / view job logs, <BS> to collapse, R to refresh, W to watch run, q to close'
-  )
 
   -- Set buffer lines
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)

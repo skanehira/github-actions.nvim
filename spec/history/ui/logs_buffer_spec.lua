@@ -88,4 +88,35 @@ test (ubuntu-latest, stable)	Run tests	2025-10-18T04:09:41.1234567Z Test Suites:
       assert.matches('No logs available', content)
     end)
   end)
+
+  describe('keymap help text position', function()
+    it('should display keymap help text at the top of the buffer', function()
+      local bufnr, _ = logs_buffer.create_buffer('build / Run tests', 12345)
+
+      local logs =
+        [[test (ubuntu-latest, stable)	Set up job	2025-10-18T04:09:32.3975987Z Current runner version: '2.329.0'
+test (ubuntu-latest, stable)	Run tests	2025-10-18T04:09:40.8901234Z PASS spec/example_spec.js]]
+
+      logs_buffer.render(bufnr, logs)
+
+      local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+
+      -- First line should contain keymap help text
+      assert.matches('Press q to close', lines[1])
+      assert.matches('za to toggle fold', lines[1])
+    end)
+
+    it('should have empty line after help text', function()
+      local bufnr, _ = logs_buffer.create_buffer('build / Run tests', 12345)
+
+      local logs = [[test (ubuntu-latest, stable)	Run tests	2025-10-18T04:09:40.8901234Z PASS]]
+
+      logs_buffer.render(bufnr, logs)
+
+      local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+
+      -- Second line should be empty
+      assert.equals('', lines[2])
+    end)
+  end)
 end)
