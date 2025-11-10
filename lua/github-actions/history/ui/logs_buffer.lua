@@ -171,6 +171,10 @@ end
 function M.render(bufnr, logs)
   local lines = {}
 
+  -- Add keymap help text at the top
+  table.insert(lines, 'Press q to close, za to toggle fold, zo to open fold, zc to close fold')
+  table.insert(lines, '')
+
   -- Add logs content
   if logs and logs ~= '' then
     local log_lines = vim.split(logs, '\n', { plain = true })
@@ -180,12 +184,6 @@ function M.render(bufnr, logs)
   else
     table.insert(lines, 'No logs available.')
   end
-
-  -- Add blank line
-  table.insert(lines, '')
-
-  -- Add footer
-  table.insert(lines, 'Press q to close, za to toggle fold, zo to open fold, zc to close fold')
 
   -- Set buffer content
   vim.bo[bufnr].modifiable = true

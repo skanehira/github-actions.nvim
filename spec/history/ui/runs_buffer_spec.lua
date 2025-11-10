@@ -417,4 +417,53 @@ describe('history.ui.runs_buffer', function()
       assert.is_true(true)
     end)
   end)
+
+  describe('keymap help text position', function()
+    it('should display keymap help text at the top of the buffer', function()
+      local bufnr = runs_buffer.create_buffer('test.yml')
+
+      local runs = {
+        {
+          databaseId = 12345,
+          displayTitle = 'test run',
+          headBranch = 'main',
+          status = 'completed',
+          conclusion = 'success',
+          createdAt = '2025-10-19T10:00:00Z',
+          updatedAt = '2025-10-19T10:05:00Z',
+        },
+      }
+
+      runs_buffer.render(bufnr, runs)
+
+      local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+
+      -- First line should contain keymap help text
+      assert.matches('Press <CR>', lines[1])
+      assert.matches('q to close', lines[1])
+    end)
+
+    it('should have empty line after help text', function()
+      local bufnr = runs_buffer.create_buffer('test.yml')
+
+      local runs = {
+        {
+          databaseId = 12345,
+          displayTitle = 'test run',
+          headBranch = 'main',
+          status = 'completed',
+          conclusion = 'success',
+          createdAt = '2025-10-19T10:00:00Z',
+          updatedAt = '2025-10-19T10:05:00Z',
+        },
+      }
+
+      runs_buffer.render(bufnr, runs)
+
+      local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+
+      -- Second line should be empty
+      assert.equals('', lines[2])
+    end)
+  end)
 end)

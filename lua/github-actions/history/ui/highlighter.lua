@@ -204,7 +204,8 @@ function M.apply_highlights(bufnr, runs, highlights)
   vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
 
   -- Highlight each run line and expanded content
-  local current_line = 0 -- First run starts at line 0 (0-based)
+  -- First run starts at line 2 (0-based) due to keymap help text and empty line at the top
+  local current_line = 2
   for _, run in ipairs(runs) do
     M.highlight_run_line(bufnr, ns, current_line, run, highlights)
     current_line = current_line + 1
@@ -225,10 +226,6 @@ function M.apply_highlights(bufnr, runs, highlights)
       end
     end
   end
-
-  -- Highlight footer
-  local footer_line = current_line + 1
-  M.highlight_footer(bufnr, ns, footer_line, highlights)
 end
 
 return M
