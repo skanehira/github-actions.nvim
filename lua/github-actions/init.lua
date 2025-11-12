@@ -38,14 +38,12 @@ end
 
 ---Dispatch the workflow in the current buffer
 function M.dispatch_workflow()
-  local bufnr = vim.api.nvim_get_current_buf()
-  dispatch.dispatch_workflow(bufnr)
+  dispatch.dispatch_workflow()
 end
 
 ---Show workflow run history for the current buffer
 function M.show_history()
-  local bufnr = vim.api.nvim_get_current_buf()
-  history.show_history(bufnr, config.history)
+  history.show_history(config.history)
 end
 
 return M
