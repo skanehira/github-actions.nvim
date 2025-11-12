@@ -4,7 +4,6 @@ local M = {}
 local parser = require('github-actions.dispatch.parser')
 local input = require('github-actions.dispatch.input')
 local github = require('github-actions.shared.github')
-local detector = require('github-actions.shared.workflow')
 local picker = require('github-actions.shared.picker')
 local branch_picker = require('github-actions.dispatch.branch_picker')
 
@@ -69,19 +68,10 @@ local function dispatch_workflow_for_file(workflow_filepath)
 end
 
 ---Dispatch workflow with user interaction
----If current buffer is a workflow file, dispatch it.
----Otherwise, show a selector to choose a workflow file.
----@param bufnr number Buffer number
-function M.dispatch_workflow(bufnr)
-  local filepath = vim.api.nvim_buf_get_name(bufnr)
-
-  -- Check if current buffer is a workflow file
-  if detector.is_workflow_file(filepath) then
-    dispatch_workflow_for_file(filepath)
-    return
-  end
-
-  -- Current buffer is not a workflow file, show selector
+---Always displays a workflow file selector, allowing users to choose
+---which workflow to dispatch.
+function M.dispatch_workflow()
+  -- Always show workflow file selector
   picker.select_workflow_files({
     prompt = 'Select workflow file:',
     on_select = function(selected_paths)
