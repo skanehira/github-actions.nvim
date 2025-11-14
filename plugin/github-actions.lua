@@ -15,3 +15,9 @@ vim.api.nvim_create_user_command('GithubActionsHistory', function()
 end, {
   desc = 'Show workflow run history',
 })
+
+vim.api.nvim_create_user_command('GithubActionsWatch', function()
+  github_actions.watch_workflow()
+end, {
+  desc = 'Watch running workflow execution using gh CLI',
+})
