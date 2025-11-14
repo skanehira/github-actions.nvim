@@ -4,6 +4,7 @@ local M = {}
 local versions = require('github-actions.versions')
 local dispatch = require('github-actions.dispatch')
 local history = require('github-actions.history')
+local watch = require('github-actions.watch')
 local highlights = require('github-actions.lib.highlights')
 local cfg = require('github-actions.config')
 
@@ -44,6 +45,11 @@ end
 ---Show workflow run history for the current buffer
 function M.show_history()
   history.show_history(config.history)
+end
+
+---Watch running workflow execution
+function M.watch_workflow()
+  watch.watch_workflow(config.history)
 end
 
 return M

@@ -26,6 +26,7 @@ integration directly within your editor. It allows you to:
 - Dispatch workflows with workflow_dispatch trigger
 - View workflow run history with status, duration, and timestamps
 - View job logs with syntax highlighting and folding
+- Watch running workflow executions in real-time
 
 ==============================================================================
 2. REQUIREMENTS                               *github-actions-requirements*
@@ -88,7 +89,27 @@ View the run history for any workflow file. The history view shows:
 
 You can expand runs to view jobs and steps, and view logs for each job.
 
-4.4 Workflow Selection~
+4.4 Workflow Watch~
+
+Watch running workflow executions in real-time using the GitHub CLI. The
+watch feature:
+1. Prompts you to select a workflow file
+2. Fetches all workflow runs for the selected workflow
+3. Filters to show only running workflows (status: in_progress or queued)
+4. Displays appropriate action based on the number of running workflows:
+   - No running workflows: Shows an info message
+   - Single running workflow: Launches gh run watch directly in a new tab
+   - Multiple running workflows: Shows a picker to select which run to watch
+
+The watch terminal opens in a new tab with `gh run watch <run-id>` command.
+You can exit the terminal with <Ctrl-C> or close the tab when done.
+
+Run Picker Format: [icon] branch-name (#run-id)
+- Icon shows the run status (⊙ for in_progress, ○ for queued)
+- Branch name indicates which branch triggered the workflow
+- Run ID is the GitHub workflow run identifier
+
+4.5 Workflow Selection~
 
 When running commands outside of a workflow file, a picker appears to select
 workflow files. The picker behavior depends on whether telescope.nvim is
@@ -213,6 +234,20 @@ history.logs_fold_by_default       *github-actions-history-logs-fold-by-default*
     - Timestamp and duration
     - Expandable jobs and steps (press <CR>)
 
+                                                    *:GithubActionsWatch*
+:GithubActionsWatch
+    Watch running workflow executions in real-time. The command will:
+    1. Show a picker to select a workflow file
+    2. Fetch all workflow runs for the selected workflow
+    3. Filter to show only running workflows (in_progress or queued)
+    4. Take action based on the number of running workflows:
+       - No running workflows: Display info message
+       - Single running workflow: Launch gh run watch directly
+       - Multiple running workflows: Show picker to select which run to watch
+    5. Open terminal in new tab with `gh run watch <run-id>`
+
+    You can use this command from anywhere in Neovim, not just workflow files.
+
 ==============================================================================
 7. FUNCTIONS                                     *github-actions-functions*
 
@@ -231,6 +266,9 @@ github_actions.dispatch_workflow()              *github-actions.dispatch_workflo
 
 github_actions.show_history()                   *github-actions.show_history()*
     Show workflow run history. See |:GithubActionsHistory|
+
+github_actions.watch_workflow()                 *github-actions.watch_workflow()*
+    Watch running workflow executions. See |:GithubActionsWatch|
 
 github_actions.get_config()                     *github-actions.get_config()*
     Get the current plugin configuration.
@@ -315,6 +353,13 @@ You can set up custom keymaps for the plugin functions:
             require('github-actions').show_history()
           end,
           desc = 'Show workflow history',
+        },
+        {
+          '<leader>gw',
+          function()
+            require('github-actions').watch_workflow()
+          end,
+          desc = 'Watch running workflow',
         },
       },
       opts = {},
