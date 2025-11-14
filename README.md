@@ -9,6 +9,7 @@ A Neovim plugin for managing GitHub Actions workflows directly from Neovim.
 - 📦 Check GitHub Actions versions automatically
 - 🚀 Dispatch workflows with `workflow_dispatch` trigger
 - 📊 View workflow run history with status, duration, and timestamps
+- 👁️ Watch running workflow executions in real-time
 
 ## Requirements
 
@@ -105,6 +106,7 @@ require('github-actions').setup({
 
 - `:GithubActionsDispatch` - Dispatch the current workflow (only available in workflow files with `workflow_dispatch` trigger)
 - `:GithubActionsHistory` - Show workflow run history for the current workflow file
+- `:GithubActionsWatch` - Watch running workflow executions in real-time
 
 ### Workflow Selection
 
@@ -120,6 +122,26 @@ When running these commands outside of a workflow file, a picker will appear to 
 **Without telescope.nvim (fallback mode):**
 - Use `vim.ui.select` for single file selection
 - No preview or multi-select support
+
+### Workflow Watch Usage
+
+The `:GithubActionsWatch` command allows you to monitor running workflow executions in real-time:
+
+1. Run `:GithubActionsWatch` to open the workflow picker
+2. Select a workflow file
+3. The plugin will:
+   - Fetch all workflow runs for the selected workflow
+   - Filter to show only running workflows (status: `in_progress` or `queued`)
+   - If no running workflows: Display an info message
+   - If exactly one running workflow: Launch `gh run watch` directly in a new tab
+   - If multiple running workflows: Show a picker to select which one to watch
+4. The watch terminal opens in a new tab with `gh run watch <run-id>`
+5. Exit the terminal with `Ctrl-C` or close the tab when done
+
+**Run Picker Format**: `[icon] branch-name (#run-id)`
+- Icon shows the run status (⊙ for in_progress, ○ for queued)
+- Branch name indicates which branch triggered the workflow
+- Run ID is the GitHub workflow run identifier
 
 ### Workflow History Usage
 
@@ -157,7 +179,8 @@ You can set up keymaps to call the plugin's functions directly:
   config = function()
     local actions = require('github-actions')
     vim.keymap.set('n', '<leader>gd', actions.dispatch_workflow, { desc = 'Dispatch workflow' })
-    vim.keymap.set('n', '<leader>gh', actions.show_history, { desc = 'Dispatch workflow' })
+    vim.keymap.set('n', '<leader>gh', actions.show_history, { desc = 'Show workflow history' })
+    vim.keymap.set('n', '<leader>gw', actions.watch_workflow, { desc = 'Watch running workflow' })
     actions.setup({});
   end,
 }

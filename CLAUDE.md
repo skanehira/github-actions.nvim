@@ -4,7 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Neovim plugin written in Lua that checks GitHub Actions versions and displays them inline using extmarks. The plugin automatically activates for `.github/workflows/*.yml` files and `.github/actions/*/action.yml` files, parsing them with treesitter and showing version information as virtual text at the end of each line.
+This is a Neovim plugin written in Lua that provides comprehensive GitHub Actions workflow management:
+- **Version Checking**: Automatically checks GitHub Actions versions and displays them inline using extmarks
+- **Workflow Dispatch**: Trigger workflows with `workflow_dispatch` support
+- **Run History**: Browse workflow run history with expandable jobs and steps
+- **Live Watch**: Monitor running workflow executions in real-time
+
+The plugin automatically activates for `.github/workflows/*.yml` files and `.github/actions/*/action.yml` files, parsing them with treesitter and showing version information as virtual text at the end of each line.
 
 ## Development Commands
 
@@ -45,6 +51,9 @@ make check
 **Entry Point (`lua/github-actions/init.lua`)**
 - Exports `setup(opts)` for plugin configuration
 - Exports `check_versions()` to trigger version checking
+- Exports `dispatch_workflow()` to trigger workflow dispatch
+- Exports `show_history()` to display workflow run history
+- Exports `watch_workflow()` to watch running workflow executions
 - Orchestrates the workflow: checker → display
 
 **Workflow Processing (`lua/github-actions/workflow/`)**
@@ -65,6 +74,13 @@ make check
 - `show_versions()`: High-level function that clears and displays version info
 - Configurable icons and highlight groups
 - Displays three states: latest (✓), outdated (⚠), error (✗)
+
+**Watch Module (`lua/github-actions/watch/`)**
+- `init.lua`: Entry point for watch functionality, orchestrates workflow selection to terminal launch
+- `filter.lua`: Filters running workflows (status: `in_progress` or `queued`)
+- `run_picker.lua`: Displays picker to select from multiple running workflows
+- Launches `gh run watch` in new tab for real-time monitoring
+- Reuses `shared/picker.lua` and `history/api.lua` for consistency
 
 **Supporting Modules**
 - `cache.lua`: Simple in-memory cache (owner/repo → version)
@@ -112,9 +128,13 @@ The codebase uses LuaLS annotations extensively:
 ## Testing Strategy
 
 Tests are organized to mirror the source structure:
-- `spec/workflow/parser_spec.lua` → `lua/github-actions/workflow/parser.lua`
-- `spec/github_spec.lua` → `lua/github-actions/github.lua`
+- `spec/versions/parser_spec.lua` → `lua/github-actions/versions/parser.lua`
+- `spec/shared/github_spec.lua` → `lua/github-actions/shared/github.lua`
+- `spec/watch/filter_spec.lua` → `lua/github-actions/watch/filter.lua`
+- `spec/watch/run_picker_spec.lua` → `lua/github-actions/watch/run_picker.lua`
+- `spec/watch/init_spec.lua` → `lua/github-actions/watch/init.lua`
 - Each module is tested independently with fixtures for API responses
+- Integration tests verify end-to-end workflows with mocked external dependencies
 
 
 # AI-DLC and Spec-Driven Development
