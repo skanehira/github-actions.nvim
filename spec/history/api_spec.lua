@@ -352,4 +352,49 @@ describe('workflow.history', function()
       assert.matches('Failed to fetch logs', result_err)
     end)
   end)
+
+  describe('rerun', function()
+    it('should call gh run rerun with correct arguments', function()
+      stub(vim, 'system')
+      vim.system.invokes(function(cmd, _, callback)
+        -- Verify correct command is called
+        assert.are.same({ 'gh', 'run', 'rerun', '12345' }, cmd)
+        callback({ code = 0, stdout = '', stderr = '' })
+      end)
+
+      local callback_called = false
+      local result_err
+
+      history.rerun(12345, function(err)
+        callback_called = true
+        result_err = err
+      end)
+
+      flush_scheduled()
+
+      assert.is_true(callback_called, 'Callback was not called')
+      assert.is_nil(result_err)
+    end)
+
+    it('should handle gh command error', function()
+      stub(vim, 'system')
+      vim.system.invokes(function(_, _, callback)
+        callback({ code = 1, stdout = '', stderr = 'run 12345 cannot be rerun' })
+      end)
+
+      local callback_called = false
+      local result_err
+
+      history.rerun(12345, function(err)
+        callback_called = true
+        result_err = err
+      end)
+
+      flush_scheduled()
+
+      assert.is_true(callback_called, 'Callback was not called')
+      assert.is.not_nil(result_err)
+      assert.matches('cannot be rerun', result_err)
+    end)
+  end)
 end)

@@ -89,4 +89,27 @@ function M.fetch_logs(run_id, job_id, callback)
   end)
 end
 
+---Rerun a workflow run using gh CLI
+---@param run_id number Workflow run ID (databaseId)
+---@param callback fun(err: string|nil) Callback with error or nil on success
+function M.rerun(run_id, callback)
+  local cmd = {
+    'gh',
+    'run',
+    'rerun',
+    tostring(run_id),
+  }
+
+  vim.system(cmd, { text = true }, function(result)
+    vim.schedule(function()
+      if result.code ~= 0 then
+        callback(result.stderr)
+        return
+      end
+
+      callback(nil)
+    end)
+  end)
+end
+
 return M
