@@ -82,6 +82,24 @@ make check
 - Launches `gh run watch` in new tab for real-time monitoring
 - Reuses `shared/picker.lua` and `history/api.lua` for consistency
 
+**History Module (`lua/github-actions/history/`)**
+- `init.lua`: Entry point for history functionality
+- `api.lua`: GitHub API calls for workflow runs
+  - `fetch_runs()`: Fetches workflow run history
+  - `fetch_jobs()`: Fetches jobs for a specific run
+  - `fetch_logs()`: Fetches logs for a specific job
+  - `rerun()`: Reruns a workflow run using `gh run rerun`
+- `ui/runs_buffer.lua`: Manages the history buffer display
+  - Keymaps: `<CR>` expand/logs, `<BS>` collapse, `r` refresh, `R` rerun, `D` dispatch, `W` watch, `q` close
+  - Stores `workflow_filepath` for dispatch functionality
+
+**Dispatch Module (`lua/github-actions/dispatch/`)**
+- `init.lua`: Entry point for workflow dispatch
+  - Exports `dispatch_workflow()`: Interactive workflow dispatch with file picker
+  - Exports `dispatch_workflow_for_file(filepath)`: Dispatch a specific workflow file (used by history buffer)
+- `parser.lua`: Parses `workflow_dispatch` configuration from workflow files
+- `input_collector.lua`: Collects input parameters from user
+
 **Supporting Modules**
 - `cache.lua`: Simple in-memory cache (owner/repo → version)
 - `lib/semver.lua`: Semantic version comparison

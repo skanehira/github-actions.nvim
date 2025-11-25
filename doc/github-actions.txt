@@ -306,8 +306,14 @@ The workflow history buffer provides these keymaps:
 
     <BS>        Collapse the expanded run
 
-    R           Refresh the workflow run history
+    r           Refresh the workflow run history
                 Fetches the latest runs from GitHub API
+
+    R           Rerun the workflow at cursor
+                Triggers a rerun of the selected workflow run
+
+    D           Dispatch the current workflow
+                Opens workflow dispatch with inputs and branch selection
 
     W           Watch a running workflow
                 - Only available for in_progress or queued runs
