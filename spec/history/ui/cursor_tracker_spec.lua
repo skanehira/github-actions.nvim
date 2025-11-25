@@ -25,7 +25,7 @@ describe('history.ui.cursor_tracker', function()
 
       -- Set buffer content to match expected format with header
       vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {
-        'Press <CR> to expand run / view job logs, <BS> to collapse, R to refresh, W to watch run, q to close',
+        '<CR> expand/view logs, <BS> collapse, r refresh, R rerun, D dispatch, W watch, q close',
         '',
         '✓ #12345 main: feat  2h ago  5m',
         '✓ #12346 dev: fix  1h ago  3m',
@@ -58,7 +58,7 @@ describe('history.ui.cursor_tracker', function()
 
       -- Set buffer content with header: header (line 1), empty (line 2), run1 (line 3), job (line 4), step1 (line 5), step2 (line 6), run2 (line 7)
       vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {
-        'Press <CR> to expand run / view job logs, <BS> to collapse, R to refresh, W to watch run, q to close',
+        '<CR> expand/view logs, <BS> collapse, r refresh, R rerun, D dispatch, W watch, q close',
         '',
         '✓ #12345 main: feat',
         '  ✓ Job: job1',
@@ -113,7 +113,7 @@ describe('history.ui.cursor_tracker', function()
 
       -- Set buffer content with header
       vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {
-        'Press <CR> to expand run / view job logs, <BS> to collapse, R to refresh, W to watch run, q to close',
+        '<CR> expand/view logs, <BS> collapse, r refresh, R rerun, D dispatch, W watch, q close',
         '',
         '✓ #12345 main: feat',
         '  ✓ Job: job1',
@@ -147,7 +147,7 @@ describe('history.ui.cursor_tracker', function()
       }
 
       vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {
-        'Press <CR> to expand run / view job logs, <BS> to collapse, R to refresh, W to watch run, q to close',
+        '<CR> expand/view logs, <BS> collapse, r refresh, R rerun, D dispatch, W watch, q close',
         '',
         '✓ #12345 main: feat',
         '  ✓ Job: job1',
@@ -175,7 +175,7 @@ describe('history.ui.cursor_tracker', function()
       }
 
       vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {
-        'Press <CR> to expand run / view job logs, <BS> to collapse, R to refresh, W to watch run, q to close',
+        '<CR> expand/view logs, <BS> collapse, r refresh, R rerun, D dispatch, W watch, q close',
         '',
         '✓ #12345 main: feat',
         '  ✓ Job: job1',
