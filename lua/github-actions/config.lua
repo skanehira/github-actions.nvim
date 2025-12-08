@@ -43,8 +43,9 @@
 ---@field collapse? string Key to collapse expanded run (default: '<BS>')
 ---@field refresh? string Key to refresh history (default: 'r')
 ---@field rerun? string Key to rerun workflow (default: 'R')
----@field dispatch? string Key to dispatch workflow (default: 'D')
----@field watch? string Key to watch running workflow (default: 'W')
+---@field dispatch? string Key to dispatch workflow (default: 'd')
+---@field watch? string Key to watch running workflow (default: 'w')
+---@field cancel? string Key to cancel running workflow (default: 'C')
 
 ---@class HistoryLogsKeymaps
 ---@field close? string Key to close the buffer (default: 'q')
@@ -117,6 +118,7 @@ local defaults = {
         rerun = 'R',
         dispatch = 'd',
         watch = 'w',
+        cancel = 'C',
       },
       logs = {
         close = 'q',

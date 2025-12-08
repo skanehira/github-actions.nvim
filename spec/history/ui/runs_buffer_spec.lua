@@ -448,6 +448,46 @@ describe('history.ui.runs_buffer', function()
     end)
   end)
 
+  describe('cancel run functionality', function()
+    it('should set up C keymap for cancelling runs', function()
+      local bufnr, _ = runs_buffer.create_buffer('ci.yml', '.github/workflows/ci.yml')
+
+      -- Check that 'C' keymap exists
+      local keymaps = vim.api.nvim_buf_get_keymap(bufnr, 'n')
+      local has_C_keymap = false
+      for _, map in ipairs(keymaps) do
+        if map.lhs == 'C' then
+          has_C_keymap = true
+          break
+        end
+      end
+      assert.is_true(has_C_keymap, 'Should have "C" keymap to cancel run')
+    end)
+
+    it('should show help text mentioning C keymap', function()
+      local bufnr = runs_buffer.create_buffer('test.yml', '.github/workflows/test.yml')
+
+      local runs = {
+        {
+          databaseId = 12345,
+          displayTitle = 'test run',
+          headBranch = 'main',
+          status = 'in_progress',
+          createdAt = '2025-10-19T10:00:00Z',
+          updatedAt = '2025-10-19T10:05:00Z',
+        },
+      }
+
+      runs_buffer.render(bufnr, runs)
+
+      local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+      local content = table.concat(lines, '\n')
+
+      -- Help text should mention C keymap
+      assert.matches('C cancel', content)
+    end)
+  end)
+
   describe('keymap help text position', function()
     it('should display keymap help text at the top of the buffer', function()
       local bufnr = runs_buffer.create_buffer('test.yml', '.github/workflows/test.yml')

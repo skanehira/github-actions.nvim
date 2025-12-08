@@ -10,6 +10,7 @@ https://github.com/user-attachments/assets/c4566feb-c9c3-4a58-93d0-e6902c447a03
 - 🚀 Dispatch workflows with `workflow_dispatch` trigger
 - 📊 View workflow run history with status, duration, and timestamps
 - 👁️ Watch running workflow executions in real-time
+- ❌ Cancel running or queued workflow executions
 
 ## Requirements
 
@@ -108,6 +109,7 @@ require('github-actions').setup({
         rerun = 'R',          -- Rerun workflow
         dispatch = 'd',       -- Dispatch workflow
         watch = 'w',          -- Watch running workflow
+        cancel = 'C',         -- Cancel running workflow
       },
       logs = {                -- Logs buffer
         close = 'q',          -- Close the buffer
@@ -172,7 +174,9 @@ The `:GithubActionsWatch` command allows you to monitor running workflow executi
    - Opens a terminal running `gh run watch <run-id>`
    - Returns focus to history buffer in normal mode
    - Auto-refreshes history when watch completes
-8. Press `q` to close the history buffer
+8. Press `C` to cancel a running workflow (only for in_progress or queued runs)
+   - Auto-refreshes history when cancel completes
+9. Press `q` to close the history buffer
 
 #### Log Buffer
 

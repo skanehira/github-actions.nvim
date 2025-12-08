@@ -312,6 +312,55 @@ local function rerun_run(bufnr)
   end)
 end
 
+---Cancel a running workflow run at cursor
+---@param bufnr number Buffer number
+local function cancel_run(bufnr)
+  local data = buffer_data[bufnr]
+  if not data or not data.runs then
+    return
+  end
+
+  local run_idx = cursor_tracker.get_run_at_cursor(bufnr, data.runs)
+  if not run_idx then
+    vim.notify('[GitHub Actions] Cursor is not on a run', vim.log.levels.WARN)
+    return
+  end
+
+  local run = data.runs[run_idx]
+
+  -- Check if run is cancellable (only in_progress or queued runs can be cancelled)
+  if run.status ~= 'in_progress' and run.status ~= 'queued' then
+    local message = string.format(
+      '[GitHub Actions] Run #%d is %s. Only in-progress or queued runs can be cancelled.',
+      run.databaseId,
+      run.status
+    )
+    vim.notify(message, vim.log.levels.WARN)
+    return
+  end
+
+  vim.notify(string.format('[GitHub Actions] Cancelling workflow run #%d...', run.databaseId), vim.log.levels.INFO)
+
+  history.cancel(run.databaseId, function(err)
+    vim.schedule(function()
+      if err then
+        vim.notify('[GitHub Actions] Failed to cancel: ' .. err, vim.log.levels.ERROR)
+        return
+      end
+
+      vim.notify(
+        string.format('[GitHub Actions] Workflow run #%d has been cancelled', run.databaseId),
+        vim.log.levels.INFO
+      )
+
+      -- Refresh the history buffer to show updated status
+      if vim.api.nvim_buf_is_valid(bufnr) then
+        refresh_history(bufnr)
+      end
+    end)
+  end)
+end
+
 ---Set up keymaps for the buffer
 ---@param bufnr number Buffer number
 ---@param keymaps HistoryListKeymaps Keymap configuration
@@ -366,6 +415,11 @@ function M.setup_keymaps(bufnr, keymaps)
   vim.keymap.set('n', keymaps.watch, function()
     watch_run(bufnr)
   end, opts)
+
+  -- Cancel running workflow
+  vim.keymap.set('n', keymaps.cancel, function()
+    cancel_run(bufnr)
+  end, opts)
 end
 
 ---Setup syntax highlighting for the buffer
@@ -404,11 +458,13 @@ end
 ---@param keymaps HistoryListKeymaps Keymap configuration
 ---@return string help_text Help text for the buffer
 local function generate_help_text(keymaps)
-  -- stylua: ignore
+  -- stylua: ignore start
   return string.format(
-    '%s expand/view logs, %s collapse, %s refresh, %s rerun, %s dispatch, %s watch, %s close',
-    keymaps.expand, keymaps.collapse, keymaps.refresh, keymaps.rerun, keymaps.dispatch, keymaps.watch, keymaps.close
+    '%s expand/view logs, %s collapse, %s refresh, %s rerun, %s dispatch, %s watch, %s cancel, %s close',
+    keymaps.expand, keymaps.collapse, keymaps.refresh, keymaps.rerun, keymaps.dispatch, keymaps.watch,
+    keymaps.cancel, keymaps.close
   )
+  -- stylua: ignore end
 end
 
 ---Render run list in the buffer

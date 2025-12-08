@@ -397,4 +397,49 @@ describe('workflow.history', function()
       assert.matches('cannot be rerun', result_err)
     end)
   end)
+
+  describe('cancel', function()
+    it('should call gh run cancel with correct arguments', function()
+      stub(vim, 'system')
+      vim.system.invokes(function(cmd, _, callback)
+        -- Verify correct command is called
+        assert.are.same({ 'gh', 'run', 'cancel', '12345' }, cmd)
+        callback({ code = 0, stdout = '', stderr = '' })
+      end)
+
+      local callback_called = false
+      local result_err
+
+      history.cancel(12345, function(err)
+        callback_called = true
+        result_err = err
+      end)
+
+      flush_scheduled()
+
+      assert.is_true(callback_called, 'Callback was not called')
+      assert.is_nil(result_err)
+    end)
+
+    it('should handle gh command error for non-cancellable run', function()
+      stub(vim, 'system')
+      vim.system.invokes(function(_, _, callback)
+        callback({ code = 1, stdout = '', stderr = 'run 12345 cannot be cancelled' })
+      end)
+
+      local callback_called = false
+      local result_err
+
+      history.cancel(12345, function(err)
+        callback_called = true
+        result_err = err
+      end)
+
+      flush_scheduled()
+
+      assert.is_true(callback_called, 'Callback was not called')
+      assert.is.not_nil(result_err)
+      assert.matches('cannot be cancelled', result_err)
+    end)
+  end)
 end)

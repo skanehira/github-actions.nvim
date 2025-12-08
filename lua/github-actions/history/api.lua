@@ -112,4 +112,27 @@ function M.rerun(run_id, callback)
   end)
 end
 
+---Cancel a running workflow run using gh CLI
+---@param run_id number Workflow run ID (databaseId)
+---@param callback fun(err: string|nil) Callback with error or nil on success
+function M.cancel(run_id, callback)
+  local cmd = {
+    'gh',
+    'run',
+    'cancel',
+    tostring(run_id),
+  }
+
+  vim.system(cmd, { text = true }, function(result)
+    vim.schedule(function()
+      if result.code ~= 0 then
+        callback(result.stderr)
+        return
+      end
+
+      callback(nil)
+    end)
+  end)
+end
+
 return M
