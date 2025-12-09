@@ -376,6 +376,50 @@ describe('workflow.history', function()
       assert.is_nil(result_err)
     end)
 
+    it('should call gh run rerun with --failed flag when failed_only is true', function()
+      stub(vim, 'system')
+      vim.system.invokes(function(cmd, _, callback)
+        -- Verify --failed flag is included
+        assert.are.same({ 'gh', 'run', 'rerun', '12345', '--failed' }, cmd)
+        callback({ code = 0, stdout = '', stderr = '' })
+      end)
+
+      local callback_called = false
+      local result_err
+
+      history.rerun(12345, function(err)
+        callback_called = true
+        result_err = err
+      end, { failed_only = true })
+
+      flush_scheduled()
+
+      assert.is_true(callback_called, 'Callback was not called')
+      assert.is_nil(result_err)
+    end)
+
+    it('should call gh run rerun without --failed flag when failed_only is false', function()
+      stub(vim, 'system')
+      vim.system.invokes(function(cmd, _, callback)
+        -- Verify --failed flag is NOT included
+        assert.are.same({ 'gh', 'run', 'rerun', '12345' }, cmd)
+        callback({ code = 0, stdout = '', stderr = '' })
+      end)
+
+      local callback_called = false
+      local result_err
+
+      history.rerun(12345, function(err)
+        callback_called = true
+        result_err = err
+      end, { failed_only = false })
+
+      flush_scheduled()
+
+      assert.is_true(callback_called, 'Callback was not called')
+      assert.is_nil(result_err)
+    end)
+
     it('should handle gh command error', function()
       stub(vim, 'system')
       vim.system.invokes(function(_, _, callback)

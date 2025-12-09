@@ -89,16 +89,26 @@ function M.fetch_logs(run_id, job_id, callback)
   end)
 end
 
+---@class RerunOptions
+---@field failed_only? boolean Whether to rerun only failed jobs (default: false)
+
 ---Rerun a workflow run using gh CLI
 ---@param run_id number Workflow run ID (databaseId)
 ---@param callback fun(err: string|nil) Callback with error or nil on success
-function M.rerun(run_id, callback)
+---@param options? RerunOptions Rerun options
+function M.rerun(run_id, callback, options)
+  options = options or {}
+
   local cmd = {
     'gh',
     'run',
     'rerun',
     tostring(run_id),
   }
+
+  if options.failed_only then
+    table.insert(cmd, '--failed')
+  end
 
   vim.system(cmd, { text = true }, function(result)
     vim.schedule(function()

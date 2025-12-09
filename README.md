@@ -10,6 +10,7 @@ https://github.com/user-attachments/assets/c4566feb-c9c3-4a58-93d0-e6902c447a03
 - 🚀 Dispatch workflows with `workflow_dispatch` trigger
 - 📊 View workflow run history with status, duration, and timestamps
 - 👁️ Watch running workflow executions in real-time
+- 🔄 Rerun workflows (all jobs or failed jobs only)
 - ❌ Cancel running or queued workflow executions
 
 ## Requirements
@@ -169,6 +170,8 @@ The `:GithubActionsWatch` command allows you to monitor running workflow executi
 3. Press `h` to collapse an expanded run
 4. Press `r` to refresh the workflow run history
 5. Press `R` to rerun the workflow at cursor
+   - For failed runs: Shows a picker to choose "Rerun all jobs" or "Rerun failed jobs only"
+   - For non-failed runs: Reruns all jobs directly
 6. Press `d` to dispatch the current workflow (with inputs and branch selection)
 7. Press `w` to watch a running workflow (only for in_progress or queued runs)
    - Opens a terminal running `gh run watch <run-id>`

@@ -1,4 +1,5 @@
 local detector = require('github-actions.shared.workflow')
+local select = require('github-actions.shared.select')
 
 local M = {}
 
@@ -17,100 +18,31 @@ function M.select_workflow_files(opts)
     return
   end
 
-  -- Create display items and path mapping
+  -- Convert workflow files to SelectItem format
   local items = {}
-  local path_map = {}
   for _, path in ipairs(workflow_files) do
     local filename = path:match('[^/]+%.ya?ml$')
-    table.insert(items, filename)
-    path_map[filename] = path
+    table.insert(items, {
+      value = path,
+      display = filename,
+      path = path,
+    })
   end
 
-  -- Try to use telescope for multi-select support
-  local has_telescope, _ = pcall(require, 'telescope.builtin')
-  local has_telescope_actions, telescope_actions = pcall(require, 'telescope.actions')
-  local has_telescope_state, telescope_state = pcall(require, 'telescope.actions.state')
+  -- Create previewer for file content
+  local has_previewers, previewers = pcall(require, 'telescope.previewers')
+  local previewer = has_previewers and previewers.vim_buffer_cat.new({}) or nil
 
-  if has_telescope and has_telescope_actions and has_telescope_state then
-    -- Use telescope native picker for multi-select support and preview
-    local pickers = require('telescope.pickers')
-    local finders = require('telescope.finders')
-    local previewers = require('telescope.previewers')
-    local conf = require('telescope.config').values
-
-    pickers
-      .new({}, {
-        prompt_title = opts.prompt,
-        finder = finders.new_table({
-          results = items,
-          entry_maker = function(entry)
-            return {
-              value = entry,
-              display = entry,
-              ordinal = entry,
-              path = path_map[entry],
-            }
-          end,
-        }),
-        previewer = previewers.vim_buffer_cat.new({}),
-        sorter = conf.generic_sorter({}),
-        attach_mappings = function(prompt_bufnr, map)
-          -- Add preview scrolling keymaps
-          map('i', '<C-u>', telescope_actions.preview_scrolling_up)
-          map('i', '<C-d>', telescope_actions.preview_scrolling_down)
-          map('n', '<C-u>', telescope_actions.preview_scrolling_up)
-          map('n', '<C-d>', telescope_actions.preview_scrolling_down)
-
-          telescope_actions.select_default:replace(function()
-            local picker = telescope_state.get_current_picker(prompt_bufnr)
-            local selections = picker:get_multi_selection()
-
-            telescope_actions.close(prompt_bufnr)
-
-            -- If multi-selection is empty, use current selection
-            if vim.tbl_isempty(selections) then
-              local selection = telescope_state.get_selected_entry()
-              if selection then
-                -- Convert filename to full path
-                local full_path = path_map[selection.value]
-                opts.on_select({ full_path })
-              end
-            else
-              -- Handle multi-selection
-              local selected_paths = {}
-              for _, entry in ipairs(selections) do
-                -- Convert filename to full path
-                local full_path = path_map[entry.value]
-                table.insert(selected_paths, full_path)
-              end
-              opts.on_select(selected_paths)
-            end
-          end)
-          return true
-        end,
-      })
-      :find()
-  else
-    -- Fallback to vim.ui.select
-    vim.ui.select(items, {
-      prompt = opts.prompt,
-    }, function(selected)
-      if not selected then
-        return
-      end
-
-      -- Handle both single selection (string) and multiple selection (table)
-      local selected_items = type(selected) == 'table' and selected or { selected }
-
-      -- Convert filenames to full paths
-      local selected_paths = {}
-      for _, item in ipairs(selected_items) do
-        table.insert(selected_paths, path_map[item])
-      end
-
-      opts.on_select(selected_paths)
-    end)
-  end
+  select.select({
+    prompt = opts.prompt,
+    items = items,
+    multi_select = true,
+    previewer = previewer,
+    on_select = function(values)
+      -- values is already an array of full paths
+      opts.on_select(values)
+    end,
+  })
 end
 
 return M

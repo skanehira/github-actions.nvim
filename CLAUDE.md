@@ -9,6 +9,7 @@ This is a Neovim plugin written in Lua that provides comprehensive GitHub Action
 - **Workflow Dispatch**: Trigger workflows with `workflow_dispatch` support
 - **Run History**: Browse workflow run history with expandable jobs and steps
 - **Live Watch**: Monitor running workflow executions in real-time
+- **Rerun/Cancel**: Rerun workflows (all jobs or failed only) and cancel running workflows
 
 The plugin automatically activates for `.github/workflows/*.yml` files and `.github/actions/*/action.yml` files, parsing them with treesitter and showing version information as virtual text at the end of each line.
 
@@ -88,11 +89,13 @@ make check
   - `fetch_runs()`: Fetches workflow run history
   - `fetch_jobs()`: Fetches jobs for a specific run
   - `fetch_logs()`: Fetches logs for a specific job
-  - `rerun()`: Reruns a workflow run using `gh run rerun`
+  - `rerun(run_id, callback, options)`: Reruns a workflow run using `gh run rerun`
+    - Supports `options.failed_only` to rerun only failed jobs (`--failed` flag)
 - `ui/runs_buffer.lua`: Manages the history buffer display
   - Keymaps are customizable via `config.history.keymaps.list`
   - Default: `l` expand/logs, `h` collapse, `r` refresh, `R` rerun, `d` dispatch, `w` watch, `q` close
   - Stores `workflow_filepath` for dispatch functionality
+  - Rerun shows picker for failed runs to choose "all jobs" or "failed jobs only"
 - `ui/logs_buffer.lua`: Manages the logs buffer display
   - Keymaps are customizable via `config.history.keymaps.logs`
   - Default: `q` close (fold keymaps use Vim standard)
@@ -103,6 +106,15 @@ make check
   - Exports `dispatch_workflow_for_file(filepath)`: Dispatch a specific workflow file (used by history buffer)
 - `parser.lua`: Parses `workflow_dispatch` configuration from workflow files
 - `input_collector.lua`: Collects input parameters from user
+
+**Shared Modules (`lua/github-actions/shared/`)**
+- `select.lua`: Generic selection UI utility
+  - Supports Telescope (with multi-select) and `vim.ui.select` fallback
+  - Used by all picker modules for consistent UX
+- `picker.lua`: Workflow file picker (multi-select + preview)
+- `buffer_utils.lua`: Buffer utility functions
+- `github.lua`: GitHub API wrapper
+- `workflow.lua`: Workflow file detection
 
 **Supporting Modules**
 - `cache.lua`: Simple in-memory cache (owner/repo → version)
@@ -152,8 +164,10 @@ The codebase uses LuaLS annotations extensively:
 Tests are organized to mirror the source structure:
 - `spec/versions/parser_spec.lua` → `lua/github-actions/versions/parser.lua`
 - `spec/shared/github_spec.lua` → `lua/github-actions/shared/github.lua`
+- `spec/shared/select_spec.lua` → `lua/github-actions/shared/select.lua`
 - `spec/watch/filter_spec.lua` → `lua/github-actions/watch/filter.lua`
 - `spec/watch/run_picker_spec.lua` → `lua/github-actions/watch/run_picker.lua`
 - `spec/watch/init_spec.lua` → `lua/github-actions/watch/init.lua`
+- `spec/history/api_spec.lua` → `lua/github-actions/history/api.lua`
 - Each module is tested independently with fixtures for API responses
 - Integration tests verify end-to-end workflows with mocked external dependencies

@@ -7,6 +7,7 @@ local loading_indicator = require('github-actions.history.ui.loading_indicator')
 local log_viewer = require('github-actions.history.ui.log_viewer')
 local config = require('github-actions.config')
 local dispatch = require('github-actions.dispatch')
+local select = require('github-actions.shared.select')
 
 local M = {}
 
@@ -274,6 +275,37 @@ local function dispatch_workflow(bufnr)
   dispatch.dispatch_workflow_for_file(data.workflow_filepath)
 end
 
+---Execute rerun with given options
+---@param bufnr number Buffer number
+---@param run table Run object
+---@param options? RerunOptions Rerun options
+local function execute_rerun(bufnr, run, options)
+  local rerun_type = (options and options.failed_only) and 'failed jobs' or 'all jobs'
+
+  vim.notify(
+    string.format('[GitHub Actions] Rerunning %s for run #%d...', rerun_type, run.databaseId),
+    vim.log.levels.INFO
+  )
+
+  history.rerun(run.databaseId, function(err)
+    vim.schedule(function()
+      if err then
+        vim.notify('[GitHub Actions] Failed to rerun: ' .. err, vim.log.levels.ERROR)
+        return
+      end
+
+      vim.notify(
+        string.format('[GitHub Actions] Workflow run #%d (%s) has been queued for rerun', run.databaseId, rerun_type),
+        vim.log.levels.INFO
+      )
+
+      if vim.api.nvim_buf_is_valid(bufnr) then
+        refresh_history(bufnr)
+      end
+    end)
+  end, options)
+end
+
 ---Rerun a workflow run at cursor
 ---@param bufnr number Buffer number
 local function rerun_run(bufnr)
@@ -290,26 +322,23 @@ local function rerun_run(bufnr)
 
   local run = data.runs[run_idx]
 
-  vim.notify(string.format('[GitHub Actions] Rerunning workflow run #%d...', run.databaseId), vim.log.levels.INFO)
-
-  history.rerun(run.databaseId, function(err)
-    vim.schedule(function()
-      if err then
-        vim.notify('[GitHub Actions] Failed to rerun: ' .. err, vim.log.levels.ERROR)
-        return
-      end
-
-      vim.notify(
-        string.format('[GitHub Actions] Workflow run #%d has been queued for rerun', run.databaseId),
-        vim.log.levels.INFO
-      )
-
-      -- Refresh the history buffer to show updated status
-      if vim.api.nvim_buf_is_valid(bufnr) then
-        refresh_history(bufnr)
-      end
-    end)
-  end)
+  -- If run failed, show picker to choose rerun type
+  if run.conclusion == 'failure' then
+    select.select({
+      prompt = 'Select rerun option:',
+      items = {
+        { value = 'all', display = 'Rerun all jobs' },
+        { value = 'failed', display = 'Rerun failed jobs only' },
+      },
+      on_select = function(option)
+        local options = option == 'failed' and { failed_only = true } or nil
+        execute_rerun(bufnr, run, options)
+      end,
+    })
+  else
+    -- For non-failed runs, rerun all directly
+    execute_rerun(bufnr, run, nil)
+  end
 end
 
 ---Cancel a running workflow run at cursor

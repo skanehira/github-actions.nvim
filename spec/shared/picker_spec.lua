@@ -34,7 +34,7 @@ describe('shared.picker', function()
       detector_stub:revert()
     end)
 
-    it('should call callback with multiple file paths when using vim.ui.select with array', function()
+    it('should call callback with single file in array when using vim.ui.select (multi_select fallback)', function()
       local detector = require('github-actions.shared.workflow')
       local detector_stub = stub(detector, 'find_workflow_files')
       detector_stub.returns({
@@ -45,8 +45,9 @@ describe('shared.picker', function()
 
       local ui_select_stub = stub(vim.ui, 'select')
       ui_select_stub.invokes(function(items, opts, on_choice)
-        -- Simulate selecting multiple files (returned as array by some ui implementations)
-        on_choice({ 'ci.yml', 'test.yml' })
+        -- vim.ui.select only supports single selection
+        -- When multi_select is enabled, the selected value is wrapped in an array
+        on_choice('test.yml')
       end)
 
       local callback_stub = stub.new()
@@ -56,9 +57,9 @@ describe('shared.picker', function()
         on_select = callback_stub,
       })
 
-      -- Verify callback was called with array of full paths
+      -- Verify callback was called with array containing single full path
+      -- (multi_select mode wraps single selection in array)
       assert.stub(callback_stub).was_called_with({
-        '/repo/.github/workflows/ci.yml',
         '/repo/.github/workflows/test.yml',
       })
 
