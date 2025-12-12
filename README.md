@@ -57,6 +57,7 @@ The plugin works out of the box with sensible defaults. You can customize it:
 ```lua
 require('github-actions').setup({
   actions = {
+    enabled = true,     -- Enable version checking (default: true)
     icons = {
       outdated = '',  -- Icon for outdated versions (default)
       latest = '',    -- Icon for latest versions (default)

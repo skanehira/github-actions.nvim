@@ -162,6 +162,7 @@ The codebase uses LuaLS annotations extensively:
 ## Testing Strategy
 
 Tests are organized to mirror the source structure:
+- `spec/versions/init_spec.lua` → `lua/github-actions/versions/init.lua`
 - `spec/versions/parser_spec.lua` → `lua/github-actions/versions/parser.lua`
 - `spec/shared/github_spec.lua` → `lua/github-actions/shared/github.lua`
 - `spec/shared/select_spec.lua` → `lua/github-actions/shared/select.lua`

@@ -4,6 +4,7 @@
 ---@field error? string Icon for errors (default: " ")
 
 ---@class VirtualTextOptions
+---@field enabled? boolean Enable version checking (default: true)
 ---@field icons? VirtualTextIcons Icons for version status
 ---@field highlight_latest? string Highlight for latest (default: "GitHubActionsVersionLatest")
 ---@field highlight_outdated? string Highlight for outdated (default: "GitHubActionsVersionOutdated")
@@ -71,6 +72,7 @@ local M = {}
 -- Default configuration
 local defaults = {
   actions = {
+    enabled = true,
     icons = {
       outdated = '',
       latest = '',

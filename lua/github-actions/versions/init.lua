@@ -8,6 +8,11 @@ local display = require('github-actions.versions.ui.display')
 ---@param bufnr number Buffer number
 ---@param config table Display configuration options
 function M.check_versions(bufnr, config)
+  -- Skip if version checking is disabled
+  if config.enabled == false then
+    return
+  end
+
   checker.check_versions(bufnr, function(version_infos, error)
     -- Error handling
     if error then
