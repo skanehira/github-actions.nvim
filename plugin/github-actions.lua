@@ -21,3 +21,9 @@ vim.api.nvim_create_user_command('GithubActionsWatch', function()
 end, {
   desc = 'Watch running workflow execution using gh CLI',
 })
+
+vim.api.nvim_create_user_command('GithubActionsHistoryByPR', function()
+  github_actions.show_history({ pr_mode = true })
+end, {
+  desc = 'Show workflow run history filtered by branch/PR',
+})

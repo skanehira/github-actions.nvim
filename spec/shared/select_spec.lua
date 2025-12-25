@@ -173,6 +173,82 @@ describe('shared.select', function()
       vim.ui.select = original_select
     end)
 
+    describe('default_text', function()
+      it('should pass default_text to Telescope pickers.new when Telescope is available', function()
+        -- Mock Telescope modules
+        local captured_picker_config = nil
+
+        package.loaded['telescope.builtin'] = {}
+        package.loaded['telescope.actions'] = {
+          preview_scrolling_up = function() end,
+          preview_scrolling_down = function() end,
+          select_default = {
+            replace = function() end,
+          },
+          close = function() end,
+        }
+        package.loaded['telescope.actions.state'] = {
+          get_current_picker = function()
+            return {
+              get_multi_selection = function()
+                return {}
+              end,
+            }
+          end,
+          get_selected_entry = function()
+            return { value = { value = 'test' } }
+          end,
+        }
+        package.loaded['telescope.pickers'] = {
+          new = function(config, picker_opts)
+            captured_picker_config = config
+            return {
+              find = function() end,
+            }
+          end,
+        }
+        package.loaded['telescope.finders'] = {
+          new_table = function()
+            return {}
+          end,
+        }
+        package.loaded['telescope.config'] = {
+          values = {
+            generic_sorter = function()
+              return {}
+            end,
+          },
+        }
+
+        -- Reload select module to pick up mocked Telescope
+        package.loaded['github-actions.shared.select'] = nil
+        local select_mod = require('github-actions.shared.select')
+
+        local items = {
+          { value = 'test', display = 'Test Item' },
+        }
+
+        select_mod.select({
+          prompt = 'Select:',
+          items = items,
+          default_text = 'initial_value',
+          on_select = function(value) end,
+        })
+
+        assert.is_not_nil(captured_picker_config)
+        assert.equals('initial_value', captured_picker_config.default_text)
+
+        -- Clean up mocked modules
+        package.loaded['telescope.builtin'] = nil
+        package.loaded['telescope.actions'] = nil
+        package.loaded['telescope.actions.state'] = nil
+        package.loaded['telescope.pickers'] = nil
+        package.loaded['telescope.finders'] = nil
+        package.loaded['telescope.config'] = nil
+        package.loaded['github-actions.shared.select'] = nil
+      end)
+    end)
+
     describe('multi_select', function()
       it('should return array of values when multi_select is true', function()
         local items = {

@@ -16,13 +16,14 @@ local M = {}
 local buffer_data = {}
 
 ---Create a new buffer for displaying workflow run history
----@param workflow_file string Workflow file name (e.g., "ci.yml")
----@param workflow_filepath string Full path to workflow file (e.g., ".github/workflows/ci.yml")
+---@param workflow_file string Workflow file name (e.g., "ci.yml") or branch name for branch mode
+---@param workflow_filepath? string Full path to workflow file (e.g., ".github/workflows/ci.yml"), nil for branch mode
 ---@param open_in_new_tab? boolean Whether to open in a new tab (default: true)
 ---@param custom_keymaps? HistoryListKeymaps Custom keymap configuration
+---@param branch? string Branch name for branch filter mode (when set, workflow_file is used as display name)
 ---@return number bufnr Buffer number
 ---@return number winnr Window number
-function M.create_buffer(workflow_file, workflow_filepath, open_in_new_tab, custom_keymaps)
+function M.create_buffer(workflow_file, workflow_filepath, open_in_new_tab, custom_keymaps, branch)
   if open_in_new_tab == nil then
     open_in_new_tab = true
   end
@@ -73,11 +74,12 @@ function M.create_buffer(workflow_file, workflow_filepath, open_in_new_tab, cust
   local defaults = config.get_defaults()
   local keymaps = vim.tbl_deep_extend('force', defaults.history.keymaps.list, custom_keymaps or {})
 
-  -- Initialize buffer data with workflow_file, workflow_filepath, and keymaps
+  -- Initialize buffer data with workflow_file, workflow_filepath, keymaps, and branch
   buffer_data[bufnr] = {
     workflow_file = workflow_file,
     workflow_filepath = workflow_filepath,
     keymaps = keymaps,
+    branch = branch,
   }
 
   -- Set up keymaps
@@ -167,12 +169,11 @@ end
 local function refresh_history(bufnr)
   -- Get current buffer data
   local data = buffer_data[bufnr]
-  if not data or not data.workflow_file then
-    vim.notify('[GitHub Actions] Could not determine workflow file', vim.log.levels.ERROR)
+  if not data then
+    vim.notify('[GitHub Actions] Could not determine buffer data', vim.log.levels.ERROR)
     return
   end
 
-  local workflow_file = data.workflow_file
   local custom_icons = data.custom_icons
   local custom_highlights = data.custom_highlights
 
@@ -181,8 +182,24 @@ local function refresh_history(bufnr)
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'Refreshing workflow runs...' })
   vim.bo[bufnr].modifiable = false
 
+  -- Choose fetch method based on mode (branch mode vs workflow mode)
+  local fetch_func
+  local fetch_arg
+  if data.branch then
+    -- Branch filter mode
+    fetch_func = history.fetch_runs_by_branch
+    fetch_arg = data.branch
+  elseif data.workflow_file then
+    -- Workflow file mode
+    fetch_func = history.fetch_runs
+    fetch_arg = data.workflow_file
+  else
+    vim.notify('[GitHub Actions] Could not determine workflow file or branch', vim.log.levels.ERROR)
+    return
+  end
+
   -- Fetch fresh data from GitHub API
-  history.fetch_runs(workflow_file, function(runs, err)
+  fetch_func(fetch_arg, function(runs, err)
     vim.schedule(function()
       if not vim.api.nvim_buf_is_valid(bufnr) then
         return
@@ -502,12 +519,13 @@ end
 ---@param custom_icons? HistoryIcons Custom icon configuration
 ---@param custom_highlights? HistoryHighlights Custom highlight configuration
 function M.render(bufnr, runs, custom_icons, custom_highlights)
-  -- Store buffer data for keymap handlers, preserving workflow_file, workflow_filepath, and keymaps
+  -- Store buffer data for keymap handlers, preserving workflow_file, workflow_filepath, keymaps, and branch
   local existing_data = buffer_data[bufnr] or {}
   buffer_data[bufnr] = {
     workflow_file = existing_data.workflow_file,
     workflow_filepath = existing_data.workflow_filepath,
     keymaps = existing_data.keymaps,
+    branch = existing_data.branch,
     runs = runs,
     custom_icons = custom_icons,
     custom_highlights = custom_highlights,

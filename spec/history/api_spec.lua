@@ -442,6 +442,65 @@ describe('workflow.history', function()
     end)
   end)
 
+  describe('fetch_runs_by_branch', function()
+    it('should fetch runs filtered by branch', function()
+      stub(vim, 'system')
+      local json_response = vim.fn.json_encode({
+        {
+          conclusion = 'success',
+          createdAt = '2025-01-01T00:00:00Z',
+          databaseId = 12345,
+          displayTitle = 'CI',
+          headBranch = 'feature/test',
+          status = 'completed',
+          updatedAt = '2025-01-01T00:10:00Z',
+        },
+      })
+      vim.system.invokes(function(cmd, _, callback)
+        -- Verify --branch flag is included
+        assert.is_true(vim.tbl_contains(cmd, '--branch'))
+        assert.is_true(vim.tbl_contains(cmd, 'feature/test'))
+        callback({ code = 0, stdout = json_response, stderr = '' })
+      end)
+
+      local result_runs
+      local result_err
+
+      history.fetch_runs_by_branch('feature/test', function(runs, err)
+        result_runs = runs
+        result_err = err
+      end)
+
+      flush_scheduled()
+
+      assert.is_nil(result_err)
+      assert.is.not_nil(result_runs)
+      assert.equals(1, #result_runs)
+      assert.equals('feature/test', result_runs[1].headBranch)
+    end)
+
+    it('should handle gh command error', function()
+      stub(vim, 'system')
+      vim.system.invokes(function(_, _, callback)
+        callback({ code = 1, stdout = '', stderr = 'API error' })
+      end)
+
+      local result_runs
+      local result_err
+
+      history.fetch_runs_by_branch('main', function(runs, err)
+        result_runs = runs
+        result_err = err
+      end)
+
+      flush_scheduled()
+
+      assert.is_nil(result_runs)
+      assert.is.not_nil(result_err)
+      assert.matches('API error', result_err)
+    end)
+  end)
+
   describe('cancel', function()
     it('should call gh run cancel with correct arguments', function()
       stub(vim, 'system')

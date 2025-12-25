@@ -50,17 +50,23 @@ local function show_history_for_file(workflow_filepath, custom_icons, custom_hig
 end
 
 ---Show workflow run history
----Always displays a workflow file selector, allowing users to choose
----which workflow(s) to view history for.
+---Displays a workflow file selector (default) or branch/PR picker (when pr_mode=true)
 ---@param history_config? HistoryOptions History configuration
 function M.show_history(history_config)
   history_config = history_config or {}
+
+  -- If pr_mode is enabled, delegate to pr.init
+  if history_config.pr_mode then
+    local pr_init = require('github-actions.pr.init')
+    pr_init.show_pr_history(history_config)
+    return
+  end
 
   local custom_icons = history_config.icons
   local custom_highlights = history_config.highlights
   local custom_keymaps = history_config.keymaps
 
-  -- Always show workflow file selector
+  -- Default: show workflow file selector
   picker.select_workflow_files({
     prompt = 'Select workflow file(s)',
     on_select = function(selected_paths)

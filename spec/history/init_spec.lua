@@ -173,5 +173,45 @@ describe('history.init', function()
       system_stub:revert()
       picker_stub:revert()
     end)
+
+    it('should call pr.show_pr_history when pr_mode is true', function()
+      local pr_init = require('github-actions.pr.init')
+
+      -- Stub pr.show_pr_history
+      local pr_stub = stub(pr_init, 'show_pr_history')
+      pr_stub.invokes(function() end)
+
+      -- Call show_history with pr_mode = true
+      history.show_history({ pr_mode = true })
+      flush_scheduled()
+
+      -- Assert pr.show_pr_history was called
+      assert.stub(pr_stub).was_called(1)
+
+      pr_stub:revert()
+    end)
+
+    it('should not call pr.show_pr_history when pr_mode is false', function()
+      local pr_init = require('github-actions.pr.init')
+
+      -- Stub pr.show_pr_history
+      local pr_stub = stub(pr_init, 'show_pr_history')
+
+      -- Stub picker to avoid side effects
+      local picker_stub = stub(picker, 'select_workflow_files')
+      picker_stub.invokes(function() end)
+
+      -- Call show_history without pr_mode
+      history.show_history({})
+      flush_scheduled()
+
+      -- Assert pr.show_pr_history was NOT called
+      assert.stub(pr_stub).was_not_called()
+      -- Assert normal picker was called
+      assert.stub(picker_stub).was_called(1)
+
+      pr_stub:revert()
+      picker_stub:revert()
+    end)
   end)
 end)

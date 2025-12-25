@@ -19,3 +19,7 @@ deps/
 
 # Logs
 *.log
+
+# Generated docs
+docs/DESIGN.md
+docs/TODO.md

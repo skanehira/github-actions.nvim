@@ -43,8 +43,10 @@ function M.dispatch_workflow()
 end
 
 ---Show workflow run history for the current buffer
-function M.show_history()
-  history.show_history(config.history)
+---@param opts? HistoryOptions Additional options (merged with config.history)
+function M.show_history(opts)
+  local history_config = vim.tbl_deep_extend('force', config.history or {}, opts or {})
+  history.show_history(history_config)
 end
 
 ---Watch running workflow execution

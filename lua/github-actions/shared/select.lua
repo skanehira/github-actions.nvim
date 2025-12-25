@@ -10,6 +10,7 @@
 ---@field on_select fun(value: any|any[]) Callback when item(s) selected
 ---@field multi_select? boolean Enable multi-select mode (default: false)
 ---@field previewer? table Telescope previewer (optional)
+---@field default_text? string Initial text in search input (Telescope only)
 
 local M = {}
 
@@ -122,7 +123,12 @@ function M.select(opts)
       picker_opts.previewer = opts.previewer
     end
 
-    pickers.new({}, picker_opts):find()
+    local telescope_config = {}
+    if opts.default_text then
+      telescope_config.default_text = opts.default_text
+    end
+
+    pickers.new(telescope_config, picker_opts):find()
   else
     -- Fallback to vim.ui.select
     local display_items = create_display_items(opts.items)
