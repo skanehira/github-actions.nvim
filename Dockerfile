@@ -45,8 +45,8 @@ RUN mkdir -p /workspace/lua_modules \
     && luarocks install --tree /workspace/lua_modules busted \
     && luarocks install --tree /workspace/lua_modules luacheck
 
-# Clone nvim-treesitter (cached in layer)
-RUN git clone --depth 1 https://github.com/nvim-treesitter/nvim-treesitter deps/nvim-treesitter
+# Clone nvim-treesitter (use stable version to avoid API breaking changes)
+RUN git clone --depth 1 --branch v0.9.2 https://github.com/nvim-treesitter/nvim-treesitter deps/nvim-treesitter
 
 # Default command (source code will be mounted at runtime)
 CMD ["scripts/test/run.sh"]
