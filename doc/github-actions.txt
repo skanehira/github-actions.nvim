@@ -25,6 +25,7 @@ integration directly within your editor. It allows you to:
 - Check GitHub Actions versions automatically
 - Dispatch workflows with workflow_dispatch trigger
 - View workflow run history with status, duration, and timestamps
+- View workflow history filtered by branch/PR
 - View job logs with syntax highlighting and folding
 - Watch running workflow executions in real-time
 - Cancel running or queued workflow executions
@@ -90,7 +91,19 @@ View the run history for any workflow file. The history view shows:
 
 You can expand runs to view jobs and steps, and view logs for each job.
 
-4.4 Workflow Watch~
+4.4 Branch/PR History~
+
+View workflow run history filtered by a specific branch or PR. This allows
+you to see all workflow runs for a particular branch without selecting
+individual workflow files.
+
+The branch/PR picker:
+1. Shows all remote branches with associated PR numbers
+2. Format: `branch-name #PR-number` (or just `branch-name` if no PR)
+3. Current branch name is pre-filled in the search input for quick selection
+4. Select a branch to view all workflow runs triggered on that branch
+
+4.5 Workflow Watch~
 
 Watch running workflow executions in real-time using the GitHub CLI. The
 watch feature:
@@ -110,7 +123,7 @@ Run Picker Format: [icon] branch-name (#run-id)
 - Branch name indicates which branch triggered the workflow
 - Run ID is the GitHub workflow run identifier
 
-4.5 Workflow Selection~
+4.6 Workflow Selection~
 
 When running commands outside of a workflow file, a picker appears to select
 workflow files. The picker behavior depends on whether telescope.nvim is
@@ -268,6 +281,19 @@ history.logs_fold_by_default       *github-actions-history-logs-fold-by-default*
     - Timestamp and duration
     - Expandable jobs and steps (press <CR>)
 
+                                                *:GithubActionsHistoryByPR*
+:GithubActionsHistoryByPR
+    Show workflow run history filtered by branch or PR.
+
+    This command opens a branch/PR picker that:
+    1. Shows all remote branches with associated PR numbers
+    2. Pre-fills the current branch name in the search input
+    3. Displays branches in format: `branch-name #PR-number`
+
+    After selecting a branch, all workflow runs for that branch are displayed
+    in the history buffer. This is useful for reviewing CI status of a
+    specific branch or PR without filtering by workflow file.
+
                                                     *:GithubActionsWatch*
 :GithubActionsWatch
     Watch running workflow executions in real-time. The command will:
@@ -298,8 +324,13 @@ github_actions.check_versions()                 *github-actions.check_versions()
 github_actions.dispatch_workflow()              *github-actions.dispatch_workflow()*
     Dispatch a workflow. See |:GithubActionsDispatch|
 
-github_actions.show_history()                   *github-actions.show_history()*
+github_actions.show_history({opts})             *github-actions.show_history()*
     Show workflow run history. See |:GithubActionsHistory|
+
+    Parameters:~
+        {opts} (table|nil) Optional configuration:
+            - pr_mode (boolean): If true, show branch/PR picker instead of
+              workflow file picker. See |:GithubActionsHistoryByPR|
 
 github_actions.watch_workflow()                 *github-actions.watch_workflow()*
     Watch running workflow executions. See |:GithubActionsWatch|
@@ -398,6 +429,13 @@ You can set up custom keymaps for the plugin functions:
             require('github-actions').show_history()
           end,
           desc = 'Show workflow history',
+        },
+        {
+          '<leader>gp',
+          function()
+            require('github-actions').show_history({ pr_mode = true })
+          end,
+          desc = 'Show workflow history by branch/PR',
         },
         {
           '<leader>gw',
