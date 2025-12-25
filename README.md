@@ -9,6 +9,7 @@ https://github.com/user-attachments/assets/c4566feb-c9c3-4a58-93d0-e6902c447a03
 - 📦 Check GitHub Actions versions automatically
 - 🚀 Dispatch workflows with `workflow_dispatch` trigger
 - 📊 View workflow run history with status, duration, and timestamps
+- 🔍 View workflow history filtered by branch/PR
 - 👁️ Watch running workflow executions in real-time
 - 🔄 Rerun workflows (all jobs or failed jobs only)
 - ❌ Cancel running or queued workflow executions
@@ -125,6 +126,7 @@ require('github-actions').setup({
 
 - `:GithubActionsDispatch` - Dispatch the current workflow (only available in workflow files with `workflow_dispatch` trigger)
 - `:GithubActionsHistory` - Show workflow run history for the current workflow file
+- `:GithubActionsHistoryByPR` - Show workflow run history filtered by branch/PR
 - `:GithubActionsWatch` - Watch running workflow executions in real-time
 
 ### Workflow Selection
@@ -161,6 +163,16 @@ The `:GithubActionsWatch` command allows you to monitor running workflow executi
 - Icon shows the run status (⊙ for in_progress, ○ for queued)
 - Branch name indicates which branch triggered the workflow
 - Run ID is the GitHub workflow run identifier
+
+### Branch/PR History Usage
+
+The `:GithubActionsHistoryByPR` command allows you to view workflow run history filtered by branch or PR:
+
+1. Run `:GithubActionsHistoryByPR` to open the branch/PR picker
+2. The picker shows all remote branches with associated PR numbers (format: `branch-name #PR-number`)
+3. Current branch name is pre-filled in the search input for quick selection
+4. Select a branch to view all workflow runs for that branch
+5. The history buffer works the same as the standard workflow history
 
 ### Workflow History Usage
 
@@ -205,6 +217,7 @@ You can set up keymaps to call the plugin's functions directly:
     local actions = require('github-actions')
     vim.keymap.set('n', '<leader>gd', actions.dispatch_workflow, { desc = 'Dispatch workflow' })
     vim.keymap.set('n', '<leader>gh', actions.show_history, { desc = 'Show workflow history' })
+    vim.keymap.set('n', '<leader>gp', function() actions.show_history({ pr_mode = true }) end, { desc = 'Show workflow history by branch/PR' })
     vim.keymap.set('n', '<leader>gw', actions.watch_workflow, { desc = 'Watch running workflow' })
     actions.setup({});
   end,

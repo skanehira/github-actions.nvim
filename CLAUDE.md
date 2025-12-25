@@ -107,6 +107,15 @@ make check
 - `parser.lua`: Parses `workflow_dispatch` configuration from workflow files
 - `input_collector.lua`: Collects input parameters from user
 
+**PR Module (`lua/github-actions/pr/`)**
+- `init.lua`: Entry point for PR/branch filtered history
+  - Exports `show_pr_history(history_config)`: Shows branch/PR picker then displays filtered workflow history
+- `api.lua`: PR and branch data fetching
+  - `get_current_branch()`: Gets current git branch name
+  - `fetch_remote_branches(callback)`: Fetches remote branches via `git branch -r`
+  - `fetch_open_prs(callback)`: Fetches open PRs via `gh pr list`
+  - `fetch_branches_with_prs(callback)`: Combines branches with PR info
+
 **Shared Modules (`lua/github-actions/shared/`)**
 - `select.lua`: Generic selection UI utility
   - Supports Telescope (with multi-select) and `vim.ui.select` fallback
@@ -170,5 +179,8 @@ Tests are organized to mirror the source structure:
 - `spec/watch/run_picker_spec.lua` → `lua/github-actions/watch/run_picker.lua`
 - `spec/watch/init_spec.lua` → `lua/github-actions/watch/init.lua`
 - `spec/history/api_spec.lua` → `lua/github-actions/history/api.lua`
+- `spec/history/init_spec.lua` → `lua/github-actions/history/init.lua`
+- `spec/pr/api_spec.lua` → `lua/github-actions/pr/api.lua`
+- `spec/pr/init_spec.lua` → `lua/github-actions/pr/init.lua`
 - Each module is tested independently with fixtures for API responses
 - Integration tests verify end-to-end workflows with mocked external dependencies
