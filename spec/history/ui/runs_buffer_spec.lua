@@ -488,6 +488,47 @@ describe('history.ui.runs_buffer', function()
     end)
   end)
 
+  describe('open run in browser functionality', function()
+    it('should set up <C-o> keymap for opening runs in browser', function()
+      local bufnr, _ = runs_buffer.create_buffer('ci.yml', '.github/workflows/ci.yml')
+
+      -- Check that '<C-o>' keymap exists
+      local keymaps = vim.api.nvim_buf_get_keymap(bufnr, 'n')
+      local has_ctrl_o_keymap = false
+      for _, map in ipairs(keymaps) do
+        if map.lhs == '<C-O>' then
+          has_ctrl_o_keymap = true
+          break
+        end
+      end
+      assert.is_true(has_ctrl_o_keymap, 'Should have "<C-o>" keymap to open run in browser')
+    end)
+
+    it('should show help text mentioning <C-o> keymap', function()
+      local bufnr = runs_buffer.create_buffer('test.yml', '.github/workflows/test.yml')
+
+      local runs = {
+        {
+          databaseId = 12345,
+          displayTitle = 'test run',
+          headBranch = 'main',
+          status = 'completed',
+          conclusion = 'success',
+          createdAt = '2025-10-19T10:00:00Z',
+          updatedAt = '2025-10-19T10:05:00Z',
+        },
+      }
+
+      runs_buffer.render(bufnr, runs)
+
+      local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+      local content = table.concat(lines, '\n')
+
+      -- Help text should mention <C-o> keymap
+      assert.matches('<C%-o> open', content)
+    end)
+  end)
+
   describe('keymap help text position', function()
     it('should display keymap help text at the top of the buffer', function()
       local bufnr = runs_buffer.create_buffer('test.yml', '.github/workflows/test.yml')

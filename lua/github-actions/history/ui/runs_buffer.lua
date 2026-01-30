@@ -8,6 +8,7 @@ local log_viewer = require('github-actions.history.ui.log_viewer')
 local config = require('github-actions.config')
 local dispatch = require('github-actions.dispatch')
 local select = require('github-actions.shared.select')
+local url_module = require('github-actions.shared.url')
 
 local M = {}
 
@@ -407,6 +408,54 @@ local function cancel_run(bufnr)
   end)
 end
 
+---Open workflow run or job URL in browser
+---@param bufnr number Buffer number
+local function open_in_browser(bufnr)
+  local data = buffer_data[bufnr]
+  if not data or not data.runs then
+    return
+  end
+
+  -- Check if cursor is on a job
+  local job_run_idx, job_idx = cursor_tracker.get_job_at_cursor(data.runs)
+  if job_run_idx and job_idx then
+    local run = data.runs[job_run_idx]
+    local job = run.jobs[job_idx]
+
+    url_module.get_repo_info(function(owner, repo, err)
+      vim.schedule(function()
+        if err then
+          vim.notify('[GitHub Actions] ' .. err, vim.log.levels.ERROR)
+          return
+        end
+        local url = url_module.build_job_url(owner, repo, run.databaseId, job.databaseId)
+        url_module.open_url(url)
+      end)
+    end)
+    return
+  end
+
+  -- Check if cursor is on a run
+  local run_idx = cursor_tracker.get_run_at_cursor(bufnr, data.runs)
+  if not run_idx then
+    vim.notify('[GitHub Actions] Cursor is not on a run or job', vim.log.levels.WARN)
+    return
+  end
+
+  local run = data.runs[run_idx]
+
+  url_module.get_repo_info(function(owner, repo, err)
+    vim.schedule(function()
+      if err then
+        vim.notify('[GitHub Actions] ' .. err, vim.log.levels.ERROR)
+        return
+      end
+      local url = url_module.build_run_url(owner, repo, run.databaseId)
+      url_module.open_url(url)
+    end)
+  end)
+end
+
 ---Set up keymaps for the buffer
 ---@param bufnr number Buffer number
 ---@param keymaps HistoryListKeymaps Keymap configuration
@@ -466,6 +515,11 @@ function M.setup_keymaps(bufnr, keymaps)
   vim.keymap.set('n', keymaps.cancel, function()
     cancel_run(bufnr)
   end, opts)
+
+  -- Open run or job in browser
+  vim.keymap.set('n', keymaps.open_browser, function()
+    open_in_browser(bufnr)
+  end, opts)
 end
 
 ---Setup syntax highlighting for the buffer
@@ -506,9 +560,9 @@ end
 local function generate_help_text(keymaps)
   -- stylua: ignore start
   return string.format(
-    '%s expand/view logs, %s collapse, %s refresh, %s rerun, %s dispatch, %s watch, %s cancel, %s close',
+    '%s expand/view logs, %s collapse, %s refresh, %s rerun, %s dispatch, %s watch, %s cancel, %s open, %s close',
     keymaps.expand, keymaps.collapse, keymaps.refresh, keymaps.rerun, keymaps.dispatch, keymaps.watch,
-    keymaps.cancel, keymaps.close
+    keymaps.cancel, keymaps.open_browser, keymaps.close
   )
   -- stylua: ignore end
 end

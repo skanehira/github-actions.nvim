@@ -13,6 +13,7 @@ https://github.com/user-attachments/assets/c4566feb-c9c3-4a58-93d0-e6902c447a03
 - 👁️ Watch running workflow executions in real-time
 - 🔄 Rerun workflows (all jobs or failed jobs only)
 - ❌ Cancel running or queued workflow executions
+- 🔗 Open workflow/run/job URLs in browser
 
 ## Requirements
 
@@ -113,6 +114,7 @@ require('github-actions').setup({
         dispatch = 'd',       -- Dispatch workflow
         watch = 'w',          -- Watch running workflow
         cancel = 'C',         -- Cancel running workflow
+        open_browser = '<C-o>',  -- Open run/job URL in browser
       },
       logs = {                -- Logs buffer
         close = 'q',          -- Close the buffer
@@ -192,7 +194,10 @@ The `:GithubActionsHistoryByPR` command allows you to view workflow run history 
    - Auto-refreshes history when watch completes
 8. Press `C` to cancel a running workflow (only for in_progress or queued runs)
    - Auto-refreshes history when cancel completes
-9. Press `q` to close the history buffer
+9. Press `<C-o>` to open the run or job URL in browser
+   - On a run line: Opens the workflow run page on GitHub
+   - On a job line: Opens the specific job page on GitHub
+10. Press `q` to close the history buffer
 
 #### Log Buffer
 
@@ -219,6 +224,7 @@ You can set up keymaps to call the plugin's functions directly:
     vim.keymap.set('n', '<leader>gh', actions.show_history, { desc = 'Show workflow history' })
     vim.keymap.set('n', '<leader>gp', function() actions.show_history({ pr_mode = true }) end, { desc = 'Show workflow history by branch/PR' })
     vim.keymap.set('n', '<leader>gw', actions.watch_workflow, { desc = 'Watch running workflow' })
+    vim.keymap.set('n', '<leader>go', actions.open_workflow_url, { desc = 'Open workflow URL in browser' })
     actions.setup({});
   end,
 }

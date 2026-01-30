@@ -47,6 +47,7 @@
 ---@field dispatch? string Key to dispatch workflow (default: 'd')
 ---@field watch? string Key to watch running workflow (default: 'w')
 ---@field cancel? string Key to cancel running workflow (default: 'C')
+---@field open_browser? string Key to open run in browser (default: '<C-o>')
 
 ---@class HistoryLogsKeymaps
 ---@field close? string Key to close the buffer (default: 'q')
@@ -121,6 +122,7 @@ local defaults = {
         dispatch = 'd',
         watch = 'w',
         cancel = 'C',
+        open_browser = '<C-o>',
       },
       logs = {
         close = 'q',

@@ -15,24 +15,21 @@ The plugin automatically activates for `.github/workflows/*.yml` files and `.git
 
 ## Development Commands
 
-### Testing
+### Testing (Docker-based)
 ```bash
 # Run all tests
 make test
 
 # Run a specific test file
 make test-file FILE=spec/parser_spec.lua
-
-# Install test dependencies (nvim-treesitter)
-make install-deps
 ```
 
 ### Code Quality
 ```bash
-# Run linter (luacheck)
+# Run linter (luacheck, Docker-based)
 make lint
 
-# Format code (stylua)
+# Format code (stylua, requires local installation)
 make format
 
 # Check formatting without modifying files
@@ -40,7 +37,7 @@ make check
 ```
 
 ### Test Infrastructure
-- Tests use busted framework with nlua
+- Tests use busted framework with nlua, running inside Docker container
 - `spec/minimal_init.lua` is loaded by each test via `dofile('spec/minimal_init.lua')`
 - Test fixtures are in `spec/fixtures/`
 - Helper modules are in `spec/helpers/`
@@ -124,6 +121,9 @@ make check
 - `buffer_utils.lua`: Buffer utility functions
 - `github.lua`: GitHub API wrapper
 - `workflow.lua`: Workflow file detection
+- `url.lua`: URL builder and browser opener
+  - Builds GitHub Actions URLs (workflow, run, job)
+  - Opens URLs in browser via `vim.ui.open()`
 
 **Supporting Modules**
 - `cache.lua`: Simple in-memory cache (owner/repo → version)
@@ -182,5 +182,6 @@ Tests are organized to mirror the source structure:
 - `spec/history/init_spec.lua` → `lua/github-actions/history/init.lua`
 - `spec/pr/api_spec.lua` → `lua/github-actions/pr/api.lua`
 - `spec/pr/init_spec.lua` → `lua/github-actions/pr/init.lua`
+- `spec/shared/url_spec.lua` → `lua/github-actions/shared/url.lua`
 - Each module is tested independently with fixtures for API responses
 - Integration tests verify end-to-end workflows with mocked external dependencies

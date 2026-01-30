@@ -29,6 +29,7 @@ integration directly within your editor. It allows you to:
 - View job logs with syntax highlighting and folding
 - Watch running workflow executions in real-time
 - Cancel running or queued workflow executions
+- Open workflow/run/job URLs in browser
 
 ==============================================================================
 2. REQUIREMENTS                               *github-actions-requirements*
@@ -203,6 +204,7 @@ it using the setup function:
             dispatch = 'd',
             watch = 'w',
             cancel = 'C',
+            open_browser = '<C-o>',
           },
           logs = {
             close = 'q',
@@ -244,6 +246,7 @@ history.keymaps                               *github-actions-history-keymaps*
         - dispatch: Dispatch workflow (default: 'd')
         - watch: Watch running workflow (default: 'w')
         - cancel: Cancel running workflow (default: 'C')
+        - open_browser: Open run/job URL in browser (default: '<C-o>')
 
     keymaps.logs~
         Keymaps for the logs buffer:
@@ -335,6 +338,13 @@ github_actions.show_history({opts})             *github-actions.show_history()*
 github_actions.watch_workflow()                 *github-actions.watch_workflow()*
     Watch running workflow executions. See |:GithubActionsWatch|
 
+github_actions.open_workflow_url()              *github-actions.open_workflow_url()*
+    Open workflow URL(s) in browser. Shows a workflow file picker with
+    multi-select support. For each selected workflow file, opens the GitHub
+    Actions workflow page in the default browser.
+
+    URL format: https://github.com/{owner}/{repo}/actions/workflows/{file}
+
 github_actions.get_config()                     *github-actions.get_config()*
     Get the current plugin configuration.
 
@@ -391,6 +401,13 @@ The workflow history buffer provides these default keymaps (customizable via
                 - Only available for in_progress or queued runs
                 - Auto-refreshes history when cancel completes
 
+    <C-o>       Open run or job URL in browser
+                - On a run line: Opens the workflow run page on GitHub
+                - On a job line: Opens the specific job page on GitHub
+                URL formats:
+                - Run: https://github.com/{owner}/{repo}/actions/runs/{run_id}
+                - Job: https://github.com/{owner}/{repo}/actions/runs/{run_id}/job/{job_id}
+
     q           Close the history buffer
 
 8.3 Log Buffer~
@@ -443,6 +460,13 @@ You can set up custom keymaps for the plugin functions:
             require('github-actions').watch_workflow()
           end,
           desc = 'Watch running workflow',
+        },
+        {
+          '<leader>go',
+          function()
+            require('github-actions').open_workflow_url()
+          end,
+          desc = 'Open workflow URL in browser',
         },
       },
       opts = {},

@@ -54,4 +54,30 @@ function M.watch_workflow()
   watch.watch_workflow(config.history)
 end
 
+---Open workflow URL(s) in browser
+---Shows workflow file picker with multi-select support
+function M.open_workflow_url()
+  local picker = require('github-actions.shared.picker')
+  local url_module = require('github-actions.shared.url')
+
+  picker.select_workflow_files({
+    prompt = 'Select workflow(s) to open in browser',
+    on_select = function(selected_files)
+      url_module.get_repo_info(function(owner, repo, err)
+        vim.schedule(function()
+          if err then
+            vim.notify('[GitHub Actions] ' .. err, vim.log.levels.ERROR)
+            return
+          end
+          for _, filepath in ipairs(selected_files) do
+            local workflow_file = vim.fn.fnamemodify(filepath, ':t')
+            local url = url_module.build_workflow_url(owner, repo, workflow_file)
+            url_module.open_url(url)
+          end
+        end)
+      end)
+    end,
+  })
+end
+
 return M
