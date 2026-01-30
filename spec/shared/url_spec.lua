@@ -35,10 +35,7 @@ describe('shared.url', function()
 
     it('should handle large IDs', function()
       local result = url.build_job_url('skanehira', 'github-actions.nvim', 21508428729, 61969476646)
-      assert.equals(
-        'https://github.com/skanehira/github-actions.nvim/actions/runs/21508428729/job/61969476646',
-        result
-      )
+      assert.equals('https://github.com/skanehira/github-actions.nvim/actions/runs/21508428729/job/61969476646', result)
     end)
   end)
 
