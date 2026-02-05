@@ -120,7 +120,6 @@ function M.create_buffer(title, run_id, opts)
   local buflisted = opts.buflisted ~= nil and opts.buflisted or logs_buffer_config.buflisted
   local open_mode = opts.open_mode or logs_buffer_config.open_mode
   local window_options = opts.window_options or logs_buffer_config.window_options
-  local custom_keymaps = (opts.keymaps or {}).logs
 
   local bufname = get_buffer_name(title, run_id)
 
@@ -170,6 +169,7 @@ function M.create_buffer(title, run_id, opts)
   )
 
   -- Get keymaps from config (use custom if provided, otherwise defaults)
+  local custom_keymaps = (opts.keymaps or {}).logs
   local keymaps = vim.tbl_deep_extend('force', defaults.history.keymaps.logs, custom_keymaps or {})
 
   -- Store buffer data
