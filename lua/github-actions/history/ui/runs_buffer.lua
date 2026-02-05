@@ -44,11 +44,12 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
 
   -- Get config defaults
   local defaults = config.get_defaults()
-  local buffer_config = defaults.history.buffer
+  local history_buffer_config = defaults.history.buffer.history
 
   -- Extract options with defaults
-  local open_mode = opts.open_mode or buffer_config.open_mode
-  local buflisted = opts.buflisted ~= nil and opts.buflisted or buffer_config.buflisted
+  local open_mode = opts.open_mode or history_buffer_config.open_mode
+  local buflisted = opts.buflisted ~= nil and opts.buflisted or history_buffer_config.buflisted
+  local window_options = opts.window_options or history_buffer_config.window_options
   local custom_keymaps = opts.custom_keymaps
   local branch = opts.branch
 
@@ -63,12 +64,26 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
       -- Buffer is already displayed in a window
       -- Return the buffer and window where it's displayed without switching to it
       -- The subsequent render() call will update the buffer content
+      -- Apply window options to existing window
+      if window_options then
+        vim.api.nvim_win_call(winid, function()
+          for option, value in pairs(window_options) do
+            vim.wo[option] = value
+          end
+        end)
+      end
       return existing_bufnr, winid
     else
       -- Buffer exists but not displayed, open it according to open_mode
       M.open_window(open_mode)
       local new_winid = vim.api.nvim_get_current_win()
       vim.api.nvim_win_set_buf(new_winid, existing_bufnr)
+      -- Apply window options to new window
+      if window_options then
+        for option, value in pairs(window_options) do
+          vim.wo[new_winid][option] = value
+        end
+      end
       return existing_bufnr, new_winid
     end
   end
@@ -89,6 +104,13 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
   M.open_window(open_mode)
   local winnr = vim.api.nvim_get_current_win()
   vim.api.nvim_win_set_buf(winnr, bufnr)
+
+  -- Apply window options to window
+  if window_options then
+    for option, value in pairs(window_options) do
+      vim.wo[winnr][option] = value
+    end
+  end
 
   -- Get keymaps from config (use custom if provided, otherwise defaults)
   local keymaps = vim.tbl_deep_extend('force', defaults.history.keymaps.list, custom_keymaps or {})

@@ -120,6 +120,26 @@ require('github-actions').setup({
         close = 'q',          -- Close the buffer
       },
     },
+    -- Optional: configure how buffers are opened
+    buffer = {
+      history = {
+        open_mode = 'tab',    -- How to open history buffer: 'tab', 'vsplit', 'split', or 'current' (default: 'tab')
+        buflisted = true,     -- Whether buffer appears in buffer list (default: true)
+        window_options = {    -- Window-local options to set (default: {wrap = true})
+          wrap = true,        -- Enable line wrapping
+          number = true,      -- Show line numbers
+          cursorline = true,  -- Highlight current line
+        },
+      },
+      logs = {
+        open_mode = 'vsplit', -- How to open logs buffer: 'tab', 'vsplit', 'split', or 'current' (default: 'vsplit')
+        buflisted = true,     -- Whether buffer appears in buffer list (default: true)
+        window_options = {    -- Window-local options to set (default: {wrap = false})
+          wrap = false,       -- Disable line wrapping (better for log files)
+          number = false,     -- Hide line numbers
+        },
+      },
+    },
   },
 })
 ```

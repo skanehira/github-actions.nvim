@@ -61,6 +61,13 @@ local function focus_or_create_window(bufnr, opts)
   vim.wo.foldenable = true
   vim.wo.foldlevel = fold_by_default and 0 or 99
 
+  -- Apply window options
+  if opts.window_options then
+    for option, value in pairs(opts.window_options) do
+      vim.wo[option] = value
+    end
+  end
+
   return winnr
 end
 
@@ -107,11 +114,12 @@ function M.create_buffer(title, run_id, opts)
   -- Get config defaults for buffer options
   local config_module = require('github-actions.config')
   local defaults = config_module.get_defaults()
-  local buffer_config = defaults.history.buffer
+  local logs_buffer_config = defaults.history.buffer.logs
 
   -- Extract buffer options with defaults
-  local buflisted = opts.buflisted ~= nil and opts.buflisted or buffer_config.buflisted
-  local open_mode = opts.open_mode or opts.buffer and opts.buffer.open_mode or 'vsplit'
+  local buflisted = opts.buflisted ~= nil and opts.buflisted or logs_buffer_config.buflisted
+  local open_mode = opts.open_mode or logs_buffer_config.open_mode
+  local window_options = opts.window_options or logs_buffer_config.window_options
 
   local bufname = get_buffer_name(title, run_id)
 
@@ -121,7 +129,7 @@ function M.create_buffer(title, run_id, opts)
     -- Buffer exists, focus on it or create window for it
     local winnr = focus_or_create_window(
       existing_bufnr,
-      { logs_fold_by_default = opts.logs_fold_by_default, open_mode = open_mode }
+      { logs_fold_by_default = opts.logs_fold_by_default, open_mode = open_mode, window_options = window_options }
     )
     return existing_bufnr, winnr, true
   end
@@ -138,7 +146,7 @@ function M.create_buffer(title, run_id, opts)
     if existing_bufnr then
       local winnr = focus_or_create_window(
         existing_bufnr,
-        { logs_fold_by_default = opts.logs_fold_by_default, open_mode = open_mode }
+        { logs_fold_by_default = opts.logs_fold_by_default, open_mode = open_mode, window_options = window_options }
       )
       return existing_bufnr, winnr, true
     else
@@ -155,8 +163,10 @@ function M.create_buffer(title, run_id, opts)
   vim.bo[bufnr].modifiable = false
 
   -- Create window and set up folding
-  local winnr =
-    focus_or_create_window(bufnr, { logs_fold_by_default = opts.logs_fold_by_default, open_mode = open_mode })
+  local winnr = focus_or_create_window(
+    bufnr,
+    { logs_fold_by_default = opts.logs_fold_by_default, open_mode = open_mode, window_options = window_options }
+  )
 
   -- Get keymaps from config (use custom if provided, otherwise defaults)
   local custom_keymaps = opts and opts.keymaps and opts.keymaps.logs or nil

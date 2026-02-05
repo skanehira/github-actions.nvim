@@ -56,9 +56,14 @@
 ---@field list? HistoryListKeymaps Keymaps for the workflow run list buffer
 ---@field logs? HistoryLogsKeymaps Keymaps for the logs buffer
 
+---@class BufferOpenOptions
+---@field open_mode? string How to open buffer: "tab", "vsplit", "split", or "current"
+---@field buflisted? boolean Whether buffer should be listed in buffer list (default: true)
+---@field window_options? table<string, any> Window-local options to set (e.g., {wrap = false, number = true, cursorline = true})
+
 ---@class HistoryBufferOptions
----@field open_mode? string How to open buffers: "tab", "vsplit", "split", or "current" (default: "tab")
----@field buflisted? boolean Whether buffers should be listed in buffer list (default: true)
+---@field history? BufferOpenOptions Options for workflow run history buffer (default: open_mode="tab", window_options={wrap=true})
+---@field logs? BufferOpenOptions Options for logs buffer (default: open_mode="vsplit", window_options={wrap=false})
 
 ---@class HistoryOptions
 ---@field highlight_colors? HistoryHighlightOptions Highlight color options for workflow history display (global setup)
@@ -135,8 +140,20 @@ local defaults = {
     },
     logs_fold_by_default = true,
     buffer = {
-      open_mode = 'tab',
-      buflisted = true,
+      history = {
+        open_mode = 'tab',
+        buflisted = true,
+        window_options = {
+          wrap = true,
+        },
+      },
+      logs = {
+        open_mode = 'vsplit',
+        buflisted = true,
+        window_options = {
+          wrap = false,
+        },
+      },
     },
   },
 }
