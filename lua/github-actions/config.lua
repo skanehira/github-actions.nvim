@@ -56,12 +56,17 @@
 ---@field list? HistoryListKeymaps Keymaps for the workflow run list buffer
 ---@field logs? HistoryLogsKeymaps Keymaps for the logs buffer
 
+---@class HistoryBufferOptions
+---@field open_mode? string How to open buffers: "tab", "vsplit", "split", or "current" (default: "tab")
+---@field buflisted? boolean Whether buffers should be listed in buffer list (default: true)
+
 ---@class HistoryOptions
 ---@field highlight_colors? HistoryHighlightOptions Highlight color options for workflow history display (global setup)
 ---@field highlights? HistoryHighlights Highlight group names for workflow history display (per-buffer)
 ---@field icons? HistoryIcons Icon options for workflow history display
 ---@field keymaps? HistoryKeymaps Keymap options for history buffers
 ---@field logs_fold_by_default? boolean Whether to fold log groups by default (default: true)
+---@field buffer? HistoryBufferOptions Buffer display options
 
 ---@class GithubActionsConfig
 ---@field actions? VirtualTextOptions Display options for GitHub Actions version checking
@@ -129,6 +134,10 @@ local defaults = {
       },
     },
     logs_fold_by_default = true,
+    buffer = {
+      open_mode = 'tab',
+      buflisted = true,
+    },
   },
 }
 

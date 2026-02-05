@@ -16,18 +16,41 @@ local M = {}
 -- bufnr -> { runs = {...}, custom_icons = {...}, custom_highlights = {...} }
 local buffer_data = {}
 
+---Open a new window according to the specified mode
+---@param mode string One of: "tab", "vsplit", "split", "current"
+function M.open_window(mode)
+  if mode == 'tab' then
+    vim.cmd('tabnew')
+  elseif mode == 'vsplit' then
+    vim.cmd('vsplit')
+  elseif mode == 'split' then
+    vim.cmd('split')
+  elseif mode == 'current' then
+    -- Stay in current window
+  else
+    -- Default to tab if unknown mode
+    vim.cmd('tabnew')
+  end
+end
+
 ---Create a new buffer for displaying workflow run history
 ---@param workflow_file string Workflow file name (e.g., "ci.yml") or branch name for branch mode
 ---@param workflow_filepath? string Full path to workflow file (e.g., ".github/workflows/ci.yml"), nil for branch mode
----@param open_in_new_tab? boolean Whether to open in a new tab (default: true)
----@param custom_keymaps? HistoryListKeymaps Custom keymap configuration
----@param branch? string Branch name for branch filter mode (when set, workflow_file is used as display name)
+---@param opts? table Options table with optional fields: open_mode ("tab"|"vsplit"|"split"|"current"), buflisted (boolean), custom_keymaps (HistoryListKeymaps), branch (string)
 ---@return number bufnr Buffer number
 ---@return number winnr Window number
-function M.create_buffer(workflow_file, workflow_filepath, open_in_new_tab, custom_keymaps, branch)
-  if open_in_new_tab == nil then
-    open_in_new_tab = true
-  end
+function M.create_buffer(workflow_file, workflow_filepath, opts)
+  opts = opts or {}
+
+  -- Get config defaults
+  local defaults = config.get_defaults()
+  local buffer_config = defaults.history.buffer
+
+  -- Extract options with defaults
+  local open_mode = opts.open_mode or buffer_config.open_mode
+  local buflisted = opts.buflisted ~= nil and opts.buflisted or buffer_config.buflisted
+  local custom_keymaps = opts.custom_keymaps
+  local branch = opts.branch
 
   local bufname = string.format('[GitHub Actions] %s - Run History', workflow_file)
 
@@ -42,37 +65,32 @@ function M.create_buffer(workflow_file, workflow_filepath, open_in_new_tab, cust
       -- The subsequent render() call will update the buffer content
       return existing_bufnr, winid
     else
-      -- Buffer exists but not displayed, open it in new tab if requested
-      if open_in_new_tab then
-        vim.cmd('tabnew')
-      end
+      -- Buffer exists but not displayed, open it according to open_mode
+      M.open_window(open_mode)
       local new_winid = vim.api.nvim_get_current_win()
       vim.api.nvim_win_set_buf(new_winid, existing_bufnr)
       return existing_bufnr, new_winid
     end
   end
 
-  -- Create a new buffer
-  local bufnr = vim.api.nvim_create_buf(false, true)
+  -- Create a new buffer (listed by default to avoid [No Name] buffers)
+  local bufnr = vim.api.nvim_create_buf(buflisted, true)
 
   -- Set buffer options
   vim.bo[bufnr].buftype = 'nofile'
-  vim.bo[bufnr].bufhidden = 'wipe'
+  vim.bo[bufnr].bufhidden = 'hide' -- Changed from 'wipe' to 'hide' to preserve buffer
   vim.bo[bufnr].swapfile = false
   vim.bo[bufnr].modifiable = false
 
   -- Set buffer name
   vim.api.nvim_buf_set_name(bufnr, bufname)
 
-  -- Open buffer in a new tab if requested
-  if open_in_new_tab then
-    vim.cmd('tabnew')
-  end
+  -- Open buffer according to open_mode
+  M.open_window(open_mode)
   local winnr = vim.api.nvim_get_current_win()
   vim.api.nvim_win_set_buf(winnr, bufnr)
 
   -- Get keymaps from config (use custom if provided, otherwise defaults)
-  local defaults = config.get_defaults()
   local keymaps = vim.tbl_deep_extend('force', defaults.history.keymaps.list, custom_keymaps or {})
 
   -- Initialize buffer data with workflow_file, workflow_filepath, keymaps, and branch

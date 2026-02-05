@@ -9,13 +9,18 @@ local M = {}
 ---@param custom_icons? HistoryIcons Custom icon configuration
 ---@param custom_highlights? HistoryHighlights Custom highlight configuration
 ---@param custom_keymaps? HistoryKeymaps Custom keymap configuration
-local function show_history_for_file(workflow_filepath, custom_icons, custom_highlights, custom_keymaps)
+---@param buffer_config? HistoryBufferOptions Buffer display configuration
+local function show_history_for_file(workflow_filepath, custom_icons, custom_highlights, custom_keymaps, buffer_config)
   -- Extract filename from path
   local workflow_file = workflow_filepath:match('[^/]+%.ya?ml$')
 
   -- Create buffer first and show loading message
-  local list_keymaps = custom_keymaps and custom_keymaps.list or nil
-  local hist_bufnr, _ = runs_buffer.create_buffer(workflow_file, workflow_filepath, true, list_keymaps)
+  local opts = {
+    custom_keymaps = custom_keymaps and custom_keymaps.list or nil,
+    open_mode = buffer_config and buffer_config.open_mode or nil,
+    buflisted = buffer_config and buffer_config.buflisted or nil,
+  }
+  local hist_bufnr, _ = runs_buffer.create_buffer(workflow_file, workflow_filepath, opts)
   runs_buffer.show_loading(hist_bufnr)
 
   -- Fetch runs in the background
@@ -65,6 +70,7 @@ function M.show_history(history_config)
   local custom_icons = history_config.icons
   local custom_highlights = history_config.highlights
   local custom_keymaps = history_config.keymaps
+  local buffer_config = history_config.buffer
 
   -- Default: show workflow file selector
   picker.select_workflow_files({
@@ -72,7 +78,7 @@ function M.show_history(history_config)
     on_select = function(selected_paths)
       -- Multiple selection: open all in new tabs
       for _, filepath in ipairs(selected_paths) do
-        show_history_for_file(filepath, custom_icons, custom_highlights, custom_keymaps)
+        show_history_for_file(filepath, custom_icons, custom_highlights, custom_keymaps, buffer_config)
       end
     end,
   })

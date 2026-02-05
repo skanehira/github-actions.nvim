@@ -24,11 +24,16 @@ local function show_history_for_branch(branch, history_config)
   local custom_icons = history_config.icons
   local custom_highlights = history_config.highlights
   local custom_keymaps = history_config.keymaps
+  local buffer_config = history_config.buffer
 
   -- Create buffer first and show loading message
-  -- Pass branch as 5th argument to enable branch filter mode
-  local list_keymaps = custom_keymaps and custom_keymaps.list or nil
-  local hist_bufnr, _ = runs_buffer.create_buffer(branch, nil, true, list_keymaps, branch)
+  local opts = {
+    custom_keymaps = custom_keymaps and custom_keymaps.list or nil,
+    branch = branch,
+    open_mode = buffer_config and buffer_config.open_mode or nil,
+    buflisted = buffer_config and buffer_config.buflisted or nil,
+  }
+  local hist_bufnr, _ = runs_buffer.create_buffer(branch, nil, opts)
   runs_buffer.show_loading(hist_bufnr)
 
   -- Fetch runs filtered by branch
