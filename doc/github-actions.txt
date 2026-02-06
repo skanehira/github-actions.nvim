@@ -255,6 +255,48 @@ history.keymaps                               *github-actions-history-keymaps*
 history.logs_fold_by_default       *github-actions-history-logs-fold-by-default*
     Whether to fold log groups by default. Default: true
 
+history.buffer                                   *github-actions-history-buffer*
+    Configure how buffers are opened and displayed.
+    Contains two sub-tables:
+
+    buffer.history~
+        Configuration for workflow run history buffers:
+        - open_mode: How to open the buffer (default: 'tab')
+          Valid values: 'tab', 'vsplit', 'split', 'current'
+        - buflisted: Whether buffer appears in buffer list (default: true)
+        - window_options: Window-local options to set (default: {wrap = true})
+
+    buffer.logs~
+        Configuration for logs buffers:
+        - open_mode: How to open the buffer (default: 'vsplit')
+          Valid values: 'tab', 'vsplit', 'split', 'current'
+        - buflisted: Whether buffer appears in buffer list (default: true)
+        - window_options: Window-local options to set (default: {wrap = false})
+
+    Example:~
+>lua
+        require('github-actions').setup({
+          history = {
+            buffer = {
+              history = {
+                open_mode = 'split',   -- Open history in horizontal split
+                buflisted = true,
+                window_options = {
+                  wrap = true,
+                },
+              },
+              logs = {
+                open_mode = 'vsplit',  -- Open logs in vertical split
+                buflisted = true,
+                window_options = {
+                  wrap = false,
+                },
+              },
+            },
+          },
+        })
+<
+
 ==============================================================================
 6. COMMANDS                                       *github-actions-commands*
 
@@ -271,12 +313,22 @@ history.logs_fold_by_default       *github-actions-history-logs-fold-by-default*
     4. Dispatch the workflow using gh CLI
 
                                                     *:GithubActionsHistory*
-:GithubActionsHistory
+:GithubActionsHistory [open_mode]
     Show workflow run history. If the current buffer is a workflow file,
     show its history. Otherwise, show a selector to choose a workflow file.
 
+    Arguments:~
+        [open_mode]  Optional. How to open the buffer. Valid values:
+                     'tab', 'vsplit', 'split', 'current'
+                     Overrides history.buffer.history.open_mode config.
+
+    Example:~
+        :GithubActionsHistory split    " Open in horizontal split
+        :GithubActionsHistory vsplit   " Open in vertical split
+
     When using telescope.nvim, you can select multiple workflow files using
-    <Tab>. Each selected workflow will open in a separate tab.
+    <Tab>. Each selected workflow will open in a separate buffer using the
+    specified open_mode.
 
     The history buffer displays:
     - Recent workflow runs with status
@@ -285,8 +337,17 @@ history.logs_fold_by_default       *github-actions-history-logs-fold-by-default*
     - Expandable jobs and steps (press <CR>)
 
                                                 *:GithubActionsHistoryByPR*
-:GithubActionsHistoryByPR
+:GithubActionsHistoryByPR [open_mode]
     Show workflow run history filtered by branch or PR.
+
+    Arguments:~
+        [open_mode]  Optional. How to open the buffer. Valid values:
+                     'tab', 'vsplit', 'split', 'current'
+                     Overrides history.buffer.history.open_mode config.
+
+    Example:~
+        :GithubActionsHistoryByPR tab    " Open in new tab
+        :GithubActionsHistoryByPR split  " Open in horizontal split
 
     This command opens a branch/PR picker that:
     1. Shows all remote branches with associated PR numbers

@@ -17,8 +17,8 @@ local function show_history_for_file(workflow_filepath, custom_icons, custom_hig
   -- Create buffer first and show loading message
   local opts = {
     custom_keymaps = custom_keymaps and custom_keymaps.list or nil,
-    open_mode = buffer_config and buffer_config.open_mode or nil,
-    buflisted = buffer_config and buffer_config.buflisted or nil,
+    open_mode = buffer_config and buffer_config.history and buffer_config.history.open_mode or nil,
+    buflisted = buffer_config and buffer_config.history and buffer_config.history.buflisted or nil,
   }
   local hist_bufnr, _ = runs_buffer.create_buffer(workflow_file, workflow_filepath, opts)
   runs_buffer.show_loading(hist_bufnr)

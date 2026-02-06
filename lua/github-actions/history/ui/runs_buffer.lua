@@ -93,7 +93,7 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
 
   -- Set buffer options
   vim.bo[bufnr].buftype = 'nofile'
-  vim.bo[bufnr].bufhidden = 'hide' -- Changed from 'wipe' to 'hide' to preserve buffer
+  vim.bo[bufnr].bufhidden = 'hide'
   vim.bo[bufnr].swapfile = false
   vim.bo[bufnr].modifiable = false
 

@@ -3,6 +3,16 @@
 
 local github_actions = require('github-actions')
 
+local valid_modes = { tab = true, vsplit = true, split = true, current = true }
+
+local function get_mode_completion()
+  local modes = {}
+  for mode in pairs(valid_modes) do
+    table.insert(modes, mode)
+  end
+  return modes
+end
+
 -- Create global commands that are always available
 vim.api.nvim_create_user_command('GithubActionsDispatch', function()
   github_actions.dispatch_workflow()
@@ -15,7 +25,6 @@ vim.api.nvim_create_user_command('GithubActionsHistory', function(opts)
   local args = {}
   if opts.args and opts.args ~= '' then
     -- Support open_mode argument: e.g., :GithubActionsHistory tab, vsplit, split, current
-    local valid_modes = { tab = true, vsplit = true, split = true, current = true }
     if valid_modes[opts.args] then
       args = { buffer = { open_mode = opts.args } }
     end
@@ -25,7 +34,7 @@ end, {
   desc = 'Show workflow run history',
   nargs = '?',
   complete = function()
-    return { 'tab', 'vsplit', 'split', 'current' }
+    return get_mode_completion()
   end,
 })
 
@@ -40,7 +49,6 @@ vim.api.nvim_create_user_command('GithubActionsHistoryByPR', function(opts)
   local args = { pr_mode = true }
   if opts.args and opts.args ~= '' then
     -- Support open_mode argument: e.g., :GithubActionsHistoryByPR tab, vsplit, split, current
-    local valid_modes = { tab = true, vsplit = true, split = true, current = true }
     if valid_modes[opts.args] then
       args.buffer = { open_mode = opts.args }
     end
@@ -50,6 +58,6 @@ end, {
   desc = 'Show workflow run history filtered by branch/PR',
   nargs = '?',
   complete = function()
-    return { 'tab', 'vsplit', 'split', 'current' }
+    return get_mode_completion()
   end,
 })
