@@ -255,7 +255,7 @@ history.keymaps                               *github-actions-history-keymaps*
 history.logs_fold_by_default       *github-actions-history-logs-fold-by-default*
     Whether to fold log groups by default. Default: true
 
-history.buffer                                   *github-actions-history-buffer*
+history.buffer                             *github-actions-history-buffer-config*
     Configure how buffers are opened and displayed.
     Contains two sub-tables:
 
