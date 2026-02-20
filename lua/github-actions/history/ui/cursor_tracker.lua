@@ -2,10 +2,9 @@
 local M = {}
 
 ---Get run index from cursor line
----@param bufnr number Buffer number
 ---@param runs table[] List of run objects
 ---@return number|nil run_idx Run index (1-based) or nil if not on a run line
-function M.get_run_at_cursor(bufnr, runs)
+function M.get_run_at_cursor(runs)
   local cursor = vim.api.nvim_win_get_cursor(0)
   local line_idx = cursor[1] - 1 -- Convert to 0-based
 

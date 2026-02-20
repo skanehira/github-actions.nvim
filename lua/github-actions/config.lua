@@ -59,10 +59,10 @@
 ---@class BufferOpenOptions
 ---@field open_mode? string How to open buffer: "tab", "vsplit", "split", or "current"
 ---@field buflisted? boolean Whether buffer should be listed in buffer list (default: true)
----@field window_options? table<string, any> Window-local options to set (e.g., {wrap = false, number = true, cursorline = true})
+---@field window_options? table<string, any> Window-local options (e.g., {wrap = false, number = true})
 
 ---@class HistoryBufferOptions
----@field history? BufferOpenOptions Options for workflow run history buffer (default: open_mode="tab", window_options={wrap=true})
+---@field history? BufferOpenOptions History buffer options (default: open_mode="tab", window_options={wrap=true})
 ---@field logs? BufferOpenOptions Options for logs buffer (default: open_mode="vsplit", window_options={wrap=false})
 
 ---@class HistoryOptions

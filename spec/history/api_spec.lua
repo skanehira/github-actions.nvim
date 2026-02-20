@@ -290,8 +290,8 @@ describe('workflow.history', function()
   describe('fetch_logs', function()
     local test_cases = {
       {
-        name = 'should fetch logs successfully',
-        fixture_name = 'history/job_logs',
+        name = 'should fetch logs successfully via gh api',
+        fixture_name = 'history/job_logs_api',
         run_id = 18610558363,
         job_id = 53068027249,
         expected_lines = 21, -- Number of lines in fixture (including trailing newline)
@@ -302,7 +302,10 @@ describe('workflow.history', function()
       it(tc.name, function()
         stub(vim, 'system')
         local logs_content = fixture.load(tc.fixture_name, 'txt')
-        vim.system.invokes(function(_, _, callback)
+        vim.system.invokes(function(cmd, _, callback)
+          assert.equals('gh', cmd[1])
+          assert.equals('api', cmd[2])
+          assert.matches('actions/jobs/' .. tc.job_id .. '/logs', cmd[3])
           callback({ code = 0, stdout = logs_content, stderr = '' })
         end)
 
@@ -328,7 +331,7 @@ describe('workflow.history', function()
       end)
     end
 
-    it('should handle gh command error', function()
+    it('should handle gh api error', function()
       stub(vim, 'system')
       vim.system.invokes(function(_, _, callback)
         callback({ code = 1, stdout = '', stderr = 'Failed to fetch logs' })

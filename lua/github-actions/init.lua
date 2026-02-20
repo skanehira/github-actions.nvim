@@ -51,7 +51,13 @@ end
 
 ---Watch running workflow execution
 function M.watch_workflow()
-  watch.watch_workflow(config.history)
+  local history_opts = config.history
+  ---@type WatchOptions
+  local watch_opts = {
+    icons = history_opts and history_opts.icons,
+    highlights = history_opts and history_opts.highlights,
+  }
+  watch.watch_workflow(watch_opts)
 end
 
 ---Open workflow URL(s) in browser
@@ -65,10 +71,12 @@ function M.open_workflow_url()
     on_select = function(selected_files)
       url_module.get_repo_info(function(owner, repo, err)
         vim.schedule(function()
-          if err then
-            vim.notify('[GitHub Actions] ' .. err, vim.log.levels.ERROR)
+          if err or not owner or not repo then
+            vim.notify('[GitHub Actions] ' .. (err or 'Failed to get repo info'), vim.log.levels.ERROR)
             return
           end
+          ---@cast owner string
+          ---@cast repo string
           for _, filepath in ipairs(selected_files) do
             local workflow_file = vim.fn.fnamemodify(filepath, ':t')
             local url = url_module.build_workflow_url(owner, repo, workflow_file)

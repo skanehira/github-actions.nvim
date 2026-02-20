@@ -25,10 +25,7 @@ function M.open_window(mode)
     vim.cmd('vsplit')
   elseif mode == 'split' then
     vim.cmd('split')
-  elseif mode == 'current' then
-    -- Stay in current window
-  else
-    -- Default to tab if unknown mode
+  elseif mode ~= 'current' then
     vim.cmd('tabnew')
   end
 end
@@ -36,7 +33,7 @@ end
 ---Create a new buffer for displaying workflow run history
 ---@param workflow_file string Workflow file name (e.g., "ci.yml") or branch name for branch mode
 ---@param workflow_filepath? string Full path to workflow file (e.g., ".github/workflows/ci.yml"), nil for branch mode
----@param opts? table Options table with optional fields: open_mode ("tab"|"vsplit"|"split"|"current"), buflisted (boolean), custom_keymaps (HistoryListKeymaps), branch (string)
+---@param opts? table Options: open_mode, buflisted, custom_keymaps, branch
 ---@return number bufnr Buffer number
 ---@return number winnr Window number
 function M.create_buffer(workflow_file, workflow_filepath, opts)
@@ -44,7 +41,7 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
 
   -- Get config defaults
   local defaults = config.get_defaults()
-  local history_buffer_config = defaults.history.buffer.history
+  local history_buffer_config = vim.tbl_get(defaults, 'history', 'buffer', 'history') or {}
 
   -- Extract options with defaults
   local open_mode = opts.open_mode or history_buffer_config.open_mode
@@ -113,7 +110,8 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
   end
 
   -- Get keymaps from config (use custom if provided, otherwise defaults)
-  local keymaps = vim.tbl_deep_extend('force', defaults.history.keymaps.list, custom_keymaps or {})
+  local default_list_keymaps = assert(defaults.history.keymaps.list, 'default list keymaps must exist')
+  local keymaps = vim.tbl_deep_extend('force', default_list_keymaps, custom_keymaps or {})
 
   -- Initialize buffer data with workflow_file, workflow_filepath, keymaps, and branch
   buffer_data[bufnr] = {
@@ -158,7 +156,7 @@ local function toggle_expand(bufnr)
   end
 
   -- Not on a job, check if on a run
-  local run_idx = cursor_tracker.get_run_at_cursor(bufnr, data.runs)
+  local run_idx = cursor_tracker.get_run_at_cursor(data.runs)
   if not run_idx then
     return
   end
@@ -271,7 +269,7 @@ local function watch_run(bufnr)
     return
   end
 
-  local run_idx = cursor_tracker.get_run_at_cursor(bufnr, data.runs)
+  local run_idx = cursor_tracker.get_run_at_cursor(data.runs)
   if not run_idx then
     vim.notify('[GitHub Actions] Cursor is not on a run', vim.log.levels.WARN)
     return
@@ -299,6 +297,7 @@ local function watch_run(bufnr)
 
   -- Set up autocmd to refresh history buffer when terminal exits
   local term_bufnr = vim.api.nvim_get_current_buf()
+  ---@diagnostic disable-next-line: param-type-mismatch
   vim.api.nvim_create_autocmd('TermClose', {
     buffer = term_bufnr,
     once = true,
@@ -372,7 +371,7 @@ local function rerun_run(bufnr)
     return
   end
 
-  local run_idx = cursor_tracker.get_run_at_cursor(bufnr, data.runs)
+  local run_idx = cursor_tracker.get_run_at_cursor(data.runs)
   if not run_idx then
     vim.notify('[GitHub Actions] Cursor is not on a run', vim.log.levels.WARN)
     return
@@ -407,7 +406,7 @@ local function cancel_run(bufnr)
     return
   end
 
-  local run_idx = cursor_tracker.get_run_at_cursor(bufnr, data.runs)
+  local run_idx = cursor_tracker.get_run_at_cursor(data.runs)
   if not run_idx then
     vim.notify('[GitHub Actions] Cursor is not on a run', vim.log.levels.WARN)
     return
@@ -464,8 +463,8 @@ local function open_in_browser(bufnr)
 
     url_module.get_repo_info(function(owner, repo, err)
       vim.schedule(function()
-        if err then
-          vim.notify('[GitHub Actions] ' .. err, vim.log.levels.ERROR)
+        if err or not owner or not repo then
+          vim.notify('[GitHub Actions] ' .. (err or 'Failed to get repo info'), vim.log.levels.ERROR)
           return
         end
         local url = url_module.build_job_url(owner, repo, run.databaseId, job.databaseId)
@@ -476,7 +475,7 @@ local function open_in_browser(bufnr)
   end
 
   -- Check if cursor is on a run
-  local run_idx = cursor_tracker.get_run_at_cursor(bufnr, data.runs)
+  local run_idx = cursor_tracker.get_run_at_cursor(data.runs)
   if not run_idx then
     vim.notify('[GitHub Actions] Cursor is not on a run or job', vim.log.levels.WARN)
     return
@@ -486,8 +485,8 @@ local function open_in_browser(bufnr)
 
   url_module.get_repo_info(function(owner, repo, err)
     vim.schedule(function()
-      if err then
-        vim.notify('[GitHub Actions] ' .. err, vim.log.levels.ERROR)
+      if err or not owner or not repo then
+        vim.notify('[GitHub Actions] ' .. (err or 'Failed to get repo info'), vim.log.levels.ERROR)
         return
       end
       local url = url_module.build_run_url(owner, repo, run.databaseId)
@@ -519,7 +518,7 @@ function M.setup_keymaps(bufnr, keymaps)
       return
     end
 
-    local run_idx = cursor_tracker.get_run_at_cursor(bufnr, data.runs)
+    local run_idx = cursor_tracker.get_run_at_cursor(data.runs)
     if not run_idx then
       return
     end
@@ -635,7 +634,8 @@ function M.render(bufnr, runs, custom_icons, custom_highlights)
   local lines = {}
 
   -- Add keymap help text at the top (using configured keymaps)
-  local keymaps = existing_data.keymaps or defaults.history.keymaps.list
+  local default_list_keymaps = assert(defaults.history.keymaps.list, 'default list keymaps must exist')
+  local keymaps = existing_data.keymaps or default_list_keymaps
   table.insert(lines, generate_help_text(keymaps))
   table.insert(lines, '')
 

@@ -9,10 +9,10 @@ local M = {}
 ---@return string Icon
 function M.get_status_icon(status, conclusion, icons)
   if status == 'completed' and conclusion then
-    return icons[conclusion] or icons.unknown
+    return icons[conclusion] or icons.unknown or ''
   end
 
-  return icons[status] or icons.unknown
+  return icons[status] or icons.unknown or ''
 end
 
 ---Format a workflow run for display

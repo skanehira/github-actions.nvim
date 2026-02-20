@@ -42,10 +42,7 @@ local function focus_or_create_window(bufnr, opts)
     vim.cmd('vsplit')
   elseif open_mode == 'split' then
     vim.cmd('split')
-  elseif open_mode == 'current' then
-    -- Stay in current window
-  else
-    -- Default to vsplit
+  elseif open_mode ~= 'current' then
     vim.cmd('vsplit')
   end
 
@@ -104,7 +101,7 @@ end
 ---Create or reuse a logs buffer and window
 ---@param title string Title for the logs (e.g., "build / Run tests")
 ---@param run_id number The workflow run ID
----@param opts? table Options for log buffer (should be pre-merged with defaults, includes logs_fold_by_default, open_mode, buflisted)
+---@param opts? table Options for log buffer (includes logs_fold_by_default, open_mode, buflisted)
 ---@return number bufnr The buffer number
 ---@return number winnr The window number
 ---@return boolean is_existing Whether the buffer already existed
@@ -114,7 +111,7 @@ function M.create_buffer(title, run_id, opts)
   -- Get config defaults for buffer options
   local config_module = require('github-actions.config')
   local defaults = config_module.get_defaults()
-  local logs_buffer_config = defaults.history.buffer.logs
+  local logs_buffer_config = vim.tbl_get(defaults, 'history', 'buffer', 'logs') or {}
 
   -- Extract buffer options with defaults
   local buflisted = opts.buflisted ~= nil and opts.buflisted or logs_buffer_config.buflisted
@@ -170,7 +167,8 @@ function M.create_buffer(title, run_id, opts)
   )
 
   -- Get keymaps from config (use custom if provided, otherwise defaults)
-  local keymaps = vim.tbl_deep_extend('force', defaults.history.keymaps.logs, custom_keymaps or {})
+  local default_logs_keymaps = assert(defaults.history.keymaps.logs, 'default logs keymaps must exist')
+  local keymaps = vim.tbl_deep_extend('force', default_logs_keymaps, custom_keymaps or {})
 
   -- Store buffer data
   buffer_data[bufnr] = {
@@ -246,7 +244,9 @@ function M.render(bufnr, logs)
   -- Add keymap help text at the top (using configured keymaps)
   local data = buffer_data[bufnr]
   local defaults = config.get_defaults()
-  local keymaps = (data and data.keymaps) or defaults.history.keymaps.logs
+  local default_logs_keymaps = assert(defaults.history.keymaps.logs, 'default logs keymaps must exist')
+  ---@type HistoryLogsKeymaps
+  local keymaps = (data and data.keymaps) or default_logs_keymaps
   table.insert(lines, generate_help_text(keymaps))
   table.insert(lines, '')
 
