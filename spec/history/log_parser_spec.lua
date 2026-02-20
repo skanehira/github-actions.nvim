@@ -56,6 +56,30 @@ lint	UNKNOWN STEP	2025-10-17T11:23:49.1573737Z Valid log line]]
       assert.matches('%[11:23:49%] Valid log line', result)
     end)
 
+    it('should parse gh api log format (no tab separators)', function()
+      local raw_log = [[2025-10-18T04:09:32.3975987Z Current runner version: '2.329.0'
+2025-10-18T04:09:32.4000692Z ##[group]Runner Image Provisioner
+2025-10-18T04:09:32.4001451Z Hosted Compute Agent]]
+
+      local result = log_parser.parse(raw_log)
+
+      assert.matches("%[04:09:32%] Current runner version: '2.329.0'", result)
+      assert.matches('%[04:09:32%] ##%[group%]Runner Image Provisioner', result)
+      assert.matches('%[04:09:32%] Hosted Compute Agent', result)
+    end)
+
+    it('should parse gh api log format with different timestamps', function()
+      local raw_log = [[2025-10-18T04:09:37.1234567Z ##[group]Run npm test
+2025-10-18T04:09:38.4567890Z > test
+2025-10-18T04:09:40.8901234Z PASS spec/example_spec.js]]
+
+      local result = log_parser.parse(raw_log)
+
+      assert.matches('%[04:09:37%] ##%[group%]Run npm test', result)
+      assert.matches('%[04:09:38%] > test', result)
+      assert.matches('%[04:09:40%] PASS spec/example_spec.js', result)
+    end)
+
     it('should strip ANSI escape sequences by default', function()
       -- Use actual ANSI escape sequences with \27 (ESC character in octal)
       local esc = string.char(27)
