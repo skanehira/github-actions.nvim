@@ -43,7 +43,8 @@ end
 ---@param branch string Branch name (e.g., "origin/main" or "main")
 ---@return string normalized Normalized branch name (e.g., "main")
 function M.normalize_branch_name(branch)
-  return branch:gsub('^origin/', '')
+  local normalized = branch:gsub('^origin/', '')
+  return normalized
 end
 
 ---Sort branches with default branch first

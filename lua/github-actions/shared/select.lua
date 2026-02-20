@@ -60,6 +60,9 @@ function M.select(opts)
   local has_telescope, telescope_actions, telescope_state = check_telescope()
 
   if has_telescope then
+    assert(telescope_actions, 'telescope_actions must be available when telescope is found')
+    assert(telescope_state, 'telescope_state must be available when telescope is found')
+
     local pickers = require('telescope.pickers')
     local finders = require('telescope.finders')
     local conf = require('telescope.config').values
