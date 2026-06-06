@@ -23,6 +23,7 @@ function M.setup(opts)
 
   -- Merge user config with defaults
   config = cfg.merge_with_defaults(opts)
+  cfg.set_merged_config(config)
 end
 
 ---Get current configuration
@@ -50,14 +51,20 @@ function M.show_history(opts)
 end
 
 ---Watch running workflow execution
-function M.watch_workflow()
+---@param watch_opts? WatchOptions Additional options (merged with config.history.buffer.watch)
+function M.watch_workflow(watch_opts)
   local history_opts = config.history
+  -- Read watch config from history.buffer.watch (user-facing path) or config.watch (legacy fallback)
+  local watch_cfg = vim.tbl_get(config, 'history', 'buffer', 'watch') or config.watch or {}
+  local merged = vim.tbl_deep_extend('force', watch_cfg, watch_opts or {})
   ---@type WatchOptions
-  local watch_opts = {
+  local opts = {
     icons = history_opts and history_opts.icons,
     highlights = history_opts and history_opts.highlights,
+    open_mode = merged.open_mode,
+    window_options = merged.window_options,
   }
-  watch.watch_workflow(watch_opts)
+  watch.watch_workflow(opts)
 end
 
 ---Open workflow URL(s) in browser

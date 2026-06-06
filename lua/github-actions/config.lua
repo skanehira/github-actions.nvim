@@ -57,13 +57,14 @@
 ---@field logs? HistoryLogsKeymaps Keymaps for the logs buffer
 
 ---@class BufferOpenOptions
----@field open_mode? string How to open buffer: "tab", "vsplit", "split", or "current"
+---@field open_mode? string How to open buffer: "tab", "vsplit", "split", "current", or "float"
 ---@field buflisted? boolean Whether buffer should be listed in buffer list (default: true)
 ---@field window_options? table<string, any> Window-local options (e.g., {wrap = false, number = true})
 
 ---@class HistoryBufferOptions
 ---@field history? BufferOpenOptions History buffer options (default: open_mode="tab", window_options={wrap=true})
 ---@field logs? BufferOpenOptions Options for logs buffer (default: open_mode="vsplit", window_options={wrap=false})
+---@field watch? BufferOpenOptions Options for watch terminal (default: open_mode="tab")
 
 ---@class HistoryOptions
 ---@field highlight_colors? HistoryHighlightOptions Highlight color options for workflow history display (global setup)
@@ -73,9 +74,14 @@
 ---@field logs_fold_by_default? boolean Whether to fold log groups by default (default: true)
 ---@field buffer? HistoryBufferOptions Buffer display options
 
+---@class WatchConfigOptions
+---@field open_mode? string How to open watch terminal: "tab", "vsplit", "split", "current", "float" (default: "tab")
+---@field window_options? table<string, any> Window options for float mode (width, height, row, col)
+
 ---@class GithubActionsConfig
 ---@field actions? VirtualTextOptions Display options for GitHub Actions version checking
 ---@field history? HistoryOptions Options for workflow history display
+---@field watch? WatchConfigOptions Options for workflow watch display
 
 ---@class Config
 local M = {}
@@ -154,9 +160,21 @@ local defaults = {
           wrap = false,
         },
       },
+      watch = {
+        open_mode = 'tab',
+        buflisted = false,
+        window_options = {},
+      },
     },
   },
+  watch = {
+    open_mode = 'tab',
+    window_options = {},
+  },
 }
+
+-- Merged user configuration, populated by setup()
+local merged_config = {}
 
 ---Get default configuration
 ---@return GithubActionsConfig defaults Default configuration
@@ -173,6 +191,18 @@ function M.merge_with_defaults(user_opts)
   end
 
   return vim.tbl_deep_extend('force', M.get_defaults(), user_opts)
+end
+
+---Store the merged configuration after setup
+---@param config GithubActionsConfig The merged configuration
+function M.set_merged_config(config)
+  merged_config = config
+end
+
+---Get the merged configuration (set after setup())
+---@return GithubActionsConfig config The merged configuration
+function M.get_merged_config()
+  return merged_config
 end
 
 ---Merge custom icons with default icons
@@ -209,6 +239,12 @@ function M.merge_highlights(highlights, custom_highlights)
     end
   end
   return merged
+end
+
+---Get the watch buffer configuration from merged config
+---@return table Watch buffer config with open_mode, window_options, etc
+function M.get_watch_buffer_config()
+  return vim.tbl_get(M.get_merged_config(), 'history', 'buffer', 'watch') or {}
 end
 
 return M

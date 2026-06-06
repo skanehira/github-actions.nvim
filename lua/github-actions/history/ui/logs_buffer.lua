@@ -42,6 +42,10 @@ local function focus_or_create_window(bufnr, opts)
     vim.cmd('vsplit')
   elseif open_mode == 'split' then
     vim.cmd('split')
+  elseif open_mode == 'float' then
+    local title = opts.title or ''
+    local float_opts = vim.tbl_extend('keep', opts.window_options or {}, { title = title })
+    return buffer_utils.open_float_window(bufnr, float_opts)
   elseif open_mode ~= 'current' then
     vim.cmd('vsplit')
   end
@@ -120,6 +124,7 @@ function M.create_buffer(title, run_id, opts)
   local custom_keymaps = (opts.keymaps or {}).logs
 
   local bufname = get_buffer_name(title, run_id)
+  local built_title = 'Logs - ' .. title
 
   -- Check if buffer already exists
   local existing_bufnr = buffer_utils.find_buffer_by_name(bufname)
@@ -127,7 +132,12 @@ function M.create_buffer(title, run_id, opts)
     -- Buffer exists, focus on it or create window for it
     local winnr = focus_or_create_window(
       existing_bufnr,
-      { logs_fold_by_default = opts.logs_fold_by_default, open_mode = open_mode, window_options = window_options }
+      {
+        logs_fold_by_default = opts.logs_fold_by_default,
+        open_mode = open_mode,
+        window_options = window_options,
+        title = built_title,
+      }
     )
     return existing_bufnr, winnr, true
   end
@@ -144,7 +154,12 @@ function M.create_buffer(title, run_id, opts)
     if existing_bufnr then
       local winnr = focus_or_create_window(
         existing_bufnr,
-        { logs_fold_by_default = opts.logs_fold_by_default, open_mode = open_mode, window_options = window_options }
+        {
+          logs_fold_by_default = opts.logs_fold_by_default,
+          open_mode = open_mode,
+          window_options = window_options,
+          title = built_title,
+        }
       )
       return existing_bufnr, winnr, true
     else
@@ -163,7 +178,12 @@ function M.create_buffer(title, run_id, opts)
   -- Create window and set up folding
   local winnr = focus_or_create_window(
     bufnr,
-    { logs_fold_by_default = opts.logs_fold_by_default, open_mode = open_mode, window_options = window_options }
+    {
+      logs_fold_by_default = opts.logs_fold_by_default,
+      open_mode = open_mode,
+      window_options = window_options,
+      title = built_title,
+    }
   )
 
   -- Get keymaps from config (use custom if provided, otherwise defaults)

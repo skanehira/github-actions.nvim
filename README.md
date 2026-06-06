@@ -122,14 +122,18 @@ require('github-actions').setup({
     },
     -- Optional: configure how buffers are opened
     buffer = {
-      history = {
-        open_mode = 'tab',    -- How to open history buffer: 'tab', 'vsplit', 'split', or 'current' (default: 'tab')
-        buflisted = true,     -- Whether buffer appears in buffer list (default: true)
-        window_options = {    -- Window-local options to set (default: {wrap = true})
-          wrap = true,        -- Enable line wrapping
-          number = true,      -- Show line numbers
-          cursorline = true,  -- Highlight current line
-        },
+       history = {
+         open_mode = 'tab',    -- How to open history buffer: 'tab', 'vsplit', 'split', 'current', or 'float' (default: 'tab')
+         buflisted = true,     -- Whether buffer appears in buffer list (default: true)
+         window_options = {    -- Window-local options to set (default: {wrap = true})
+           wrap = true,        -- Enable line wrapping
+           number = true,      -- Show line numbers
+           cursorline = true,  -- Highlight current line
+         },
+       },
+      watch = {
+        open_mode = 'tab',    -- How to open watch terminal: 'tab', 'vsplit', 'split', 'current', or 'float' (default: 'tab')
+        window_options = {},  -- Float window options: width, height, row, col (default: 80% centered)
       },
       logs = {
         open_mode = 'vsplit', -- How to open logs buffer: 'tab', 'vsplit', 'split', or 'current' (default: 'vsplit')
@@ -147,9 +151,9 @@ require('github-actions').setup({
 ## Commands
 
 - `:GithubActionsDispatch` - Dispatch the current workflow (only available in workflow files with `workflow_dispatch` trigger)
-- `:GithubActionsHistory` - Show workflow run history for the current workflow file
-- `:GithubActionsHistoryByPR` - Show workflow run history filtered by branch/PR
-- `:GithubActionsWatch` - Watch running workflow executions in real-time
+- `:GithubActionsHistory [mode]` - Show workflow run history for the current workflow file. Optional mode: `tab`, `vsplit`, `split`, `current`, `float`
+- `:GithubActionsHistoryByPR [mode]` - Show workflow run history filtered by branch/PR. Optional mode: `tab`, `vsplit`, `split`, `current`, `float`
+- `:GithubActionsWatch [mode]` - Watch running workflow executions in real-time. Optional mode: `tab`, `vsplit`, `split`, `current`, `float`
 
 ### Workflow Selection
 
@@ -178,8 +182,8 @@ The `:GithubActionsWatch` command allows you to monitor running workflow executi
    - If no running workflows: Display an info message
    - If exactly one running workflow: Launch `gh run watch` directly in a new tab
    - If multiple running workflows: Show a picker to select which one to watch
-4. The watch terminal opens in a new tab with `gh run watch <run-id>`
-5. Exit the terminal with `Ctrl-C` or close the tab when done
+ 4. The watch terminal opens with `gh run watch <run-id>` (mode: `tab`, `vsplit`, `split`, `current`, or `float`)
+ 5. Exit the terminal with `Ctrl-C` or close the tab/window when done
 
 **Run Picker Format**: `[icon] branch-name (#run-id)`
 - Icon shows the run status (⊙ for in_progress, ○ for queued)
@@ -208,10 +212,11 @@ The `:GithubActionsHistoryByPR` command allows you to view workflow run history 
    - For failed runs: Shows a picker to choose "Rerun all jobs" or "Rerun failed jobs only"
    - For non-failed runs: Reruns all jobs directly
 6. Press `d` to dispatch the current workflow (with inputs and branch selection)
-7. Press `w` to watch a running workflow (only for in_progress or queued runs)
-   - Opens a terminal running `gh run watch <run-id>`
-   - Returns focus to history buffer in normal mode
-   - Auto-refreshes history when watch completes
+ 7. Press `w` to watch a running workflow (only for in_progress or queued runs)
+    - Opens a terminal running `gh run watch <run-id>`
+    - The watch terminal uses the same open mode as the history buffer (`tab`, `split`, or `float`)
+    - Returns focus to history buffer in normal mode
+    - Auto-refreshes history when watch completes
 8. Press `C` to cancel a running workflow (only for in_progress or queued runs)
    - Auto-refreshes history when cancel completes
 9. Press `<C-o>` to open the run or job URL in browser

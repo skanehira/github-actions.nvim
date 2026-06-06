@@ -30,6 +30,14 @@ describe('pr.init', function()
     pr_init = require('github-actions.pr.init')
   end)
 
+  after_each(function()
+    for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+      if vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].buftype == 'nofile' then
+        vim.api.nvim_buf_delete(bufnr, { force = true })
+      end
+    end
+  end)
+
   describe('show_pr_history', function()
     it('should fetch branches with PRs and show picker', function()
       -- Stub pr_api.get_current_branch
@@ -83,6 +91,58 @@ describe('pr.init', function()
 
       pr_api.get_current_branch:revert()
       pr_api.fetch_branches_with_prs:revert()
+      select_mod.select:revert()
+    end)
+
+    it('should pass open_mode and window_options to create_buffer', function()
+      stub(pr_api, 'get_current_branch')
+      pr_api.get_current_branch.returns('feature/branch')
+
+      stub(pr_api, 'fetch_branches_with_prs')
+      pr_api.fetch_branches_with_prs.invokes(function(callback)
+        callback({ { branch = 'feature/branch', pr_number = 1 } }, nil)
+      end)
+
+      -- Stub runs_buffer.create_buffer to capture opts
+      local runs_buffer = require('github-actions.history.ui.runs_buffer')
+      local captured_create_opts = nil
+      stub(runs_buffer, 'create_buffer')
+      runs_buffer.create_buffer.invokes(function(_, _, opts)
+        captured_create_opts = opts
+        return 1, 1
+      end)
+      stub(runs_buffer, 'show_loading')
+
+      -- Stub history_api.fetch_runs_by_branch to avoid network
+      stub(history_api, 'fetch_runs_by_branch')
+
+      -- Stub select.select to trigger on_select
+      stub(select_mod, 'select')
+      select_mod.select.invokes(function(opts)
+        opts.on_select('feature/branch')
+      end)
+
+      pr_init.show_pr_history({
+        buffer = {
+          history = {
+            open_mode = 'float',
+            window_options = { width = 0.5 },
+          },
+        },
+      })
+
+      flush_scheduled()
+
+      assert.stub(runs_buffer.create_buffer).was_called()
+      assert.is_not_nil(captured_create_opts)
+      assert.equals('float', captured_create_opts.open_mode)
+      assert.equals(0.5, captured_create_opts.window_options.width)
+
+      pr_api.get_current_branch:revert()
+      pr_api.fetch_branches_with_prs:revert()
+      runs_buffer.create_buffer:revert()
+      runs_buffer.show_loading:revert()
+      history_api.fetch_runs_by_branch:revert()
       select_mod.select:revert()
     end)
 

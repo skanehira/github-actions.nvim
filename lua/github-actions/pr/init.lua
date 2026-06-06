@@ -26,41 +26,20 @@ local function show_history_for_branch(branch, history_config)
   local custom_keymaps = history_config.keymaps
   local buffer_config = history_config.buffer
 
-  -- Create buffer first and show loading message
+  local hist_buffer_cfg = buffer_config and buffer_config.history or {}
   local opts = {
     custom_keymaps = custom_keymaps and custom_keymaps.list or nil,
     branch = branch,
-    open_mode = buffer_config and buffer_config.open_mode or nil,
-    buflisted = buffer_config and buffer_config.buflisted or nil,
+    open_mode = hist_buffer_cfg.open_mode,
+    buflisted = hist_buffer_cfg.buflisted,
+    window_options = hist_buffer_cfg.window_options,
   }
   local hist_bufnr, _ = runs_buffer.create_buffer(branch, nil, opts)
   runs_buffer.show_loading(hist_bufnr)
 
-  -- Fetch runs filtered by branch
   history_api.fetch_runs_by_branch(branch, function(runs, err)
     vim.schedule(function()
-      if not vim.api.nvim_buf_is_valid(hist_bufnr) then
-        return
-      end
-
-      if err then
-        vim.notify('[GitHub Actions] Failed to fetch workflow runs: ' .. err, vim.log.levels.ERROR)
-        vim.bo[hist_bufnr].modifiable = true
-        vim.api.nvim_buf_set_lines(hist_bufnr, 0, -1, false, { 'Failed to fetch workflow runs: ' .. err })
-        vim.bo[hist_bufnr].modifiable = false
-        return
-      end
-
-      if not runs then
-        vim.notify('[GitHub Actions] No runs data returned', vim.log.levels.ERROR)
-        vim.bo[hist_bufnr].modifiable = true
-        vim.api.nvim_buf_set_lines(hist_bufnr, 0, -1, false, { 'No runs data returned' })
-        vim.bo[hist_bufnr].modifiable = false
-        return
-      end
-
-      -- Render runs data in the buffer
-      runs_buffer.render(hist_bufnr, runs, custom_icons, custom_highlights)
+      runs_buffer.handle_fetch_result(hist_bufnr, err, runs, custom_icons, custom_highlights)
     end)
   end)
 end

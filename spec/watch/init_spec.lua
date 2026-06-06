@@ -301,5 +301,116 @@ describe('watch.init', function()
       api_stub:revert()
       run_picker_stub:revert()
     end)
+
+    it('should open terminal in float window when open_mode is float', function()
+      local picker_stub = stub(picker, 'select_workflow_files')
+      local api_stub = stub(api, 'fetch_runs')
+
+      -- Mock float window creation
+      local original_open_win = vim.api.nvim_open_win
+      local captured_float_opts = nil
+      vim.api.nvim_open_win = function(bufnr, _, opts)
+        captured_float_opts = opts
+        return 1001
+      end
+
+      -- Capture termopen command
+      local original_termopen = vim.fn.termopen
+      local termopen_args = nil
+      vim.fn.termopen = function(cmd)
+        termopen_args = cmd
+      end
+
+      picker_stub.invokes(function(opts)
+        opts.on_select({ '.github/workflows/ci.yml' })
+      end)
+
+      api_stub.invokes(function(workflow_file, callback)
+        callback({
+          {
+            databaseId = 12345,
+            status = 'in_progress',
+            headBranch = 'main',
+            displayTitle = 'CI',
+            createdAt = '2025-11-14T10:00:00Z',
+          },
+        }, nil)
+      end)
+
+      watch.watch_workflow({ open_mode = 'float' })
+      flush_scheduled()
+
+      -- Verify float window config
+      assert.is_not_nil(captured_float_opts)
+      assert.equals('editor', captured_float_opts.relative)
+      assert.equals('minimal', captured_float_opts.style)
+      assert.equals('rounded', captured_float_opts.border)
+      assert.equals('Watch - ci.yml', captured_float_opts.title)
+
+      -- Verify termopen was called with the right command
+      assert.is_not_nil(termopen_args)
+      assert.equals('gh', termopen_args[1])
+      assert.equals('run', termopen_args[2])
+      assert.equals('watch', termopen_args[3])
+      assert.equals('12345', termopen_args[4])
+
+      -- Restore mocks
+      vim.api.nvim_open_win = original_open_win
+      vim.fn.termopen = original_termopen
+      picker_stub:revert()
+      api_stub:revert()
+    end)
+
+    it('should respect custom window_options for float mode', function()
+      local picker_stub = stub(picker, 'select_workflow_files')
+      local api_stub = stub(api, 'fetch_runs')
+
+      -- Mock float window creation
+      local original_open_win = vim.api.nvim_open_win
+      local captured_float_opts = nil
+      vim.api.nvim_open_win = function(bufnr, _, opts)
+        captured_float_opts = opts
+        return 1001
+      end
+      vim.fn.termopen = function(_) end
+
+      picker_stub.invokes(function(opts)
+        opts.on_select({ '.github/workflows/ci.yml' })
+      end)
+
+      api_stub.invokes(function(workflow_file, callback)
+        callback({
+          {
+            databaseId = 999,
+            status = 'in_progress',
+            headBranch = 'main',
+            displayTitle = 'CI',
+            createdAt = '2025-11-14T10:00:00Z',
+          },
+        }, nil)
+      end)
+
+      watch.watch_workflow({
+        open_mode = 'float',
+        window_options = {
+          width = 60,
+          height = 30,
+          row = 5,
+          col = 10,
+        },
+      })
+      flush_scheduled()
+
+      assert.is_not_nil(captured_float_opts)
+      assert.equals(60, captured_float_opts.width)
+      assert.equals(30, captured_float_opts.height)
+      assert.equals(5, captured_float_opts.row)
+      assert.equals(10, captured_float_opts.col)
+
+      vim.api.nvim_open_win = original_open_win
+      vim.fn.termopen = nil
+      picker_stub:revert()
+      api_stub:revert()
+    end)
   end)
 end)

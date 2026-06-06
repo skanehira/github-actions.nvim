@@ -1,11 +1,21 @@
-dofile('spec/minimal_init.lua')
+require('spec.minimal_init')
 
 describe('shared.buffer_utils', function()
   local buffer_utils = require('github-actions.shared.buffer_utils')
   local buffer_helper = require('spec.helpers.buffer_spec')
 
+  local mocks = {}
+
+  local function setup_mock(target, key, mock_fn)
+    table.insert(mocks, { target = target, key = key, original = target[key] })
+    target[key] = mock_fn
+  end
+
   after_each(function()
-    -- Close all buffers
+    for _, mock in ipairs(mocks) do
+      mock.target[mock.key] = mock.original
+    end
+    mocks = {}
     for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
       if vim.api.nvim_buf_is_valid(bufnr) then
         buffer_helper.delete_buffer(bufnr)
@@ -30,16 +40,13 @@ describe('shared.buffer_utils', function()
     end)
 
     it('should find window across different tabs', function()
-      -- Create buffer in first tab
       local bufnr = vim.api.nvim_create_buf(false, true)
       local winid1 = vim.api.nvim_get_current_win()
       vim.api.nvim_win_set_buf(winid1, bufnr)
 
-      -- Create new tab
       vim.cmd('tabnew')
       local winid2 = vim.api.nvim_get_current_win()
 
-      -- Buffer should still be found in first tab
       local found_winid = buffer_utils.find_window_for_buffer(bufnr)
       assert.equals(winid1, found_winid)
       assert.not_equals(winid2, found_winid)
@@ -61,7 +68,6 @@ describe('shared.buffer_utils', function()
     end)
 
     it('should return first match when multiple buffers exist', function()
-      -- This shouldn't happen in practice, but test the behavior
       local bufnr1 = vim.api.nvim_create_buf(false, true)
       vim.api.nvim_buf_set_name(bufnr1, 'DuplicateName')
 
@@ -76,11 +82,9 @@ describe('shared.buffer_utils', function()
       local winid1 = vim.api.nvim_get_current_win()
       vim.api.nvim_win_set_buf(winid1, bufnr)
 
-      -- Create new tab
       vim.cmd('tabnew')
       local winid2 = vim.api.nvim_get_current_win()
 
-      -- Should not create new window, just return existing one
       local result_winid = buffer_utils.focus_or_create_window(bufnr, {})
       assert.equals(winid1, result_winid)
     end)
@@ -94,7 +98,6 @@ describe('shared.buffer_utils', function()
       assert.is_not_nil(winid)
       assert.is_true(vim.api.nvim_win_is_valid(winid))
       assert.equals(bufnr, vim.api.nvim_win_get_buf(winid))
-      -- Should have created a new window
       assert.equals(initial_win_count + 1, #vim.api.nvim_list_wins())
     end)
 
@@ -116,9 +119,87 @@ describe('shared.buffer_utils', function()
 
       local winid = buffer_utils.focus_or_create_window(bufnr, {})
 
-      -- Should reuse current window
       assert.equals(initial_winid, winid)
       assert.equals(bufnr, vim.api.nvim_win_get_buf(winid))
+    end)
+  end)
+
+  describe('open_float_window', function()
+    it('should pass title through to nvim_open_win', function()
+      local captured_opts = nil
+      setup_mock(vim.api, 'nvim_open_win', function(_, _, opts)
+        captured_opts = opts
+        return 1001
+      end)
+
+      local bufnr = vim.api.nvim_create_buf(false, true)
+      buffer_utils.open_float_window(bufnr, { title = 'test title' })
+
+      assert.is_not_nil(captured_opts)
+      assert.equals('test title', captured_opts.title)
+    end)
+
+    it('should not set title when not provided', function()
+      local captured_opts = nil
+      setup_mock(vim.api, 'nvim_open_win', function(_, _, opts)
+        captured_opts = opts
+        return 1001
+      end)
+
+      local bufnr = vim.api.nvim_create_buf(false, true)
+      buffer_utils.open_float_window(bufnr, {})
+
+      assert.is_nil(captured_opts.title)
+    end)
+  end)
+
+  describe('open_terminal_float', function()
+    it('should create buffer and open float window for terminal', function()
+      local captured_float_opts = nil
+      setup_mock(vim.api, 'nvim_open_win', function(_, _, opts)
+        captured_float_opts = opts
+        return 1001
+      end)
+      local termopen_called = false
+      setup_mock(vim.fn, 'termopen', function(cmd)
+        termopen_called = true
+        assert.equals('gh', cmd[1])
+        assert.equals('run', cmd[2])
+        assert.equals('watch', cmd[3])
+        assert.equals('12345', cmd[4])
+      end)
+
+      local bufnr, winid = buffer_utils.open_terminal_float(
+        { 'gh', 'run', 'watch', '12345' },
+        { title = 'Watch - ci.yml' }
+      )
+
+      assert.is_not_nil(bufnr)
+      assert.equals(1001, winid)
+      assert.is_true(termopen_called)
+      assert.equals('Watch - ci.yml', captured_float_opts.title)
+    end)
+
+    it('should call on_exit callback when terminal exits', function()
+      setup_mock(vim.api, 'nvim_open_win', function(_, _, _)
+        return 1001
+      end)
+      setup_mock(vim.fn, 'termopen', function() end)
+
+      local on_exit_called = false
+      local bufnr, _ = buffer_utils.open_terminal_float(
+        { 'gh', 'run', 'watch', '12345' },
+        {
+          on_exit = function()
+            on_exit_called = true
+          end,
+        }
+      )
+
+      vim.api.nvim_exec_autocmds('TermClose', { buffer = bufnr })
+      vim.wait(0, function() return false end)
+
+      assert.is_true(on_exit_called)
     end)
   end)
 end)

@@ -63,4 +63,130 @@ function M.focus_or_create_window(bufnr, opts)
   return winnr
 end
 
+---Open a floating window with consistent defaults
+---@param bufnr number Buffer number to display
+---@param opts? table Options: width, height, row, col, title (default: 80% of editor, centered)
+---@return number winid Window ID
+function M.open_float_window(bufnr, opts)
+  opts = opts or {}
+  local columns = (vim.o.columns and vim.o.columns > 0) and vim.o.columns or 80
+  local lines = (vim.o.lines and vim.o.lines > 0) and vim.o.lines or 24
+  local width = opts.width or math.floor(columns * 0.8)
+  local height = opts.height or math.floor(lines * 0.8)
+
+  local win_config = {
+    relative = 'editor',
+    width = width,
+    height = height,
+    row = opts.row or math.floor((lines - height) / 2),
+    col = opts.col or math.floor((columns - width) / 2),
+    style = 'minimal',
+    border = 'rounded',
+  }
+  if opts.title then
+    win_config.title = opts.title
+    if vim.fn.has('nvim-0.10') == 1 then
+      win_config.title_pos = 'center'
+    end
+  end
+
+  local winid = vim.api.nvim_open_win(bufnr, true, win_config)
+  for k, v in pairs(opts) do
+    if k ~= 'width' and k ~= 'height' and k ~= 'row' and k ~= 'col' and k ~= 'title' then
+      pcall(function()
+        vim.wo[winid][k] = v
+      end)
+    end
+  end
+  return winid
+end
+
+---Open a terminal in the specified mode (float, tab, vsplit, split, current)
+---@param mode string Open mode: "tab", "vsplit", "split", "current", or "float"
+---@param cmd table Command to run (list of strings, used directly for termopen in float mode)
+---@param opts? table Options
+---@param opts.window_options? table Float geometry and window options (width, height, row, col, etc.)
+---@param opts.title? string Window title (float mode only)
+---@param opts.on_exit? function Callback invoked (via vim.schedule) when terminal exits
+---@return number bufnr, number winid
+function M.open_terminal(mode, cmd, opts)
+  opts = opts or {}
+  if mode == 'float' then
+    return M.open_terminal_float(cmd, {
+      window_options = opts.window_options,
+      title = opts.title,
+      on_exit = opts.on_exit,
+    })
+  end
+
+  if mode == 'tab' then
+    vim.cmd('tabnew')
+  elseif mode == 'vsplit' then
+    vim.cmd('vsplit')
+  elseif mode == 'split' then
+    vim.cmd('split')
+  end
+
+  local cmd_str
+  if #cmd == 1 then
+    cmd_str = cmd[1]
+  else
+    cmd_str = table.concat(cmd, ' ')
+  end
+  vim.cmd(string.format('terminal %s', cmd_str))
+
+  local bufnr = vim.api.nvim_get_current_buf()
+  local winid = vim.api.nvim_get_current_win()
+
+  if opts.on_exit then
+    vim.api.nvim_create_autocmd('TermClose', {
+      buffer = bufnr,
+      once = true,
+      callback = function()
+        if vim.api.nvim_buf_is_valid(bufnr) then
+          vim.schedule(opts.on_exit)
+        end
+      end,
+    })
+  end
+
+  return bufnr, winid
+end
+
+---Open a terminal in a floating window with auto-close behavior
+---Creates a new buffer, opens it in a float, starts the given terminal command,
+---binds 'q' to close the window, and auto-closes when the terminal process exits.
+---@param cmd table Command to run (list of strings, passed to vim.fn.termopen)
+---@param opts? table Options
+---@param opts.window_options? table Float geometry and window options (width, height, row, col, title, etc.)
+---@param opts.title? string Window title (merged into window_options)
+---@param opts.on_exit? function Callback invoked (via vim.schedule) when terminal exits
+---@return number bufnr, number winid
+function M.open_terminal_float(cmd, opts)
+  opts = opts or {}
+  local bufnr = vim.api.nvim_create_buf(false, true)
+  local title = opts.title
+  local float_opts = vim.tbl_extend('keep', opts.window_options or {}, { title = title })
+  local winid = M.open_float_window(bufnr, float_opts)
+  pcall(vim.fn.termopen, cmd)
+  vim.keymap.set('n', 'q', function()
+    if vim.api.nvim_win_is_valid(winid) then
+      vim.api.nvim_win_close(winid, true)
+    end
+  end, { buffer = bufnr, noremap = true, silent = true })
+  vim.api.nvim_create_autocmd('TermClose', {
+    buffer = bufnr,
+    once = true,
+    callback = function()
+      if vim.api.nvim_win_is_valid(winid) then
+        vim.api.nvim_win_close(winid, true)
+      end
+      if opts.on_exit then
+        vim.schedule(opts.on_exit)
+      end
+    end,
+  })
+  return bufnr, winid
+end
+
 return M
