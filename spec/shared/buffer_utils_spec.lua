@@ -187,17 +187,16 @@ describe('shared.buffer_utils', function()
       setup_mock(vim.fn, 'termopen', function() end)
 
       local on_exit_called = false
-      local bufnr, _ = buffer_utils.open_terminal_float(
-        { 'gh', 'run', 'watch', '12345' },
-        {
-          on_exit = function()
-            on_exit_called = true
-          end,
-        }
-      )
+      local bufnr, _ = buffer_utils.open_terminal_float({ 'gh', 'run', 'watch', '12345' }, {
+        on_exit = function()
+          on_exit_called = true
+        end,
+      })
 
       vim.api.nvim_exec_autocmds('TermClose', { buffer = bufnr })
-      vim.wait(0, function() return false end)
+      vim.wait(0, function()
+        return false
+      end)
 
       assert.is_true(on_exit_called)
     end)

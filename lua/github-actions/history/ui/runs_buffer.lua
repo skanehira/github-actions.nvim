@@ -58,78 +58,78 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
 
   local bufname = string.format('[GitHub Actions] %s - Run History', workflow_file)
 
-   -- Check if buffer with this name already exists
-   local existing_bufnr = vim.fn.bufnr(bufname)
-    if existing_bufnr ~= -1 and vim.api.nvim_buf_is_valid(existing_bufnr) then
-       -- Buffer exists, find its window across all tab pages
-      local winid = buffer_utils.find_window_for_buffer(existing_bufnr)
-      if winid then
-        -- Buffer is already displayed in a window
-        -- Return the buffer and window where it's displayed without switching to it
-        -- The subsequent render() call will update the buffer content
-        if buffer_data[existing_bufnr] then
-          buffer_data[existing_bufnr].open_mode = open_mode
-        end
-        if window_options and open_mode ~= 'float' then
-          vim.api.nvim_win_call(winid, function()
-            for option, value in pairs(window_options) do
-              vim.wo[option] = value
-            end
-          end)
-        end
-        return existing_bufnr, winid
-      else
-        if buffer_data[existing_bufnr] then
-          buffer_data[existing_bufnr].open_mode = open_mode
-        end
-        if open_mode == 'float' then
-          local float_opts = vim.tbl_extend('keep', window_options or {}, { title = 'History - ' .. workflow_file })
-          local new_winid = M.open_window(open_mode, existing_bufnr, float_opts)
-          return existing_bufnr, new_winid
-        else
-          M.open_window(open_mode)
-          local new_winid = vim.api.nvim_get_current_win()
-          vim.api.nvim_win_set_buf(new_winid, existing_bufnr)
-          -- Apply window options to new window
-          if window_options then
-            for option, value in pairs(window_options) do
-              vim.wo[new_winid][option] = value
-            end
+  -- Check if buffer with this name already exists
+  local existing_bufnr = vim.fn.bufnr(bufname)
+  if existing_bufnr ~= -1 and vim.api.nvim_buf_is_valid(existing_bufnr) then
+    -- Buffer exists, find its window across all tab pages
+    local winid = buffer_utils.find_window_for_buffer(existing_bufnr)
+    if winid then
+      -- Buffer is already displayed in a window
+      -- Return the buffer and window where it's displayed without switching to it
+      -- The subsequent render() call will update the buffer content
+      if buffer_data[existing_bufnr] then
+        buffer_data[existing_bufnr].open_mode = open_mode
+      end
+      if window_options and open_mode ~= 'float' then
+        vim.api.nvim_win_call(winid, function()
+          for option, value in pairs(window_options) do
+            vim.wo[option] = value
           end
-          return existing_bufnr, new_winid
-        end
+        end)
       end
-    end
-
-   -- Create a new buffer (listed by default to avoid [No Name] buffers)
-   local bufnr = vim.api.nvim_create_buf(buflisted, true)
-
-   -- Set buffer options
-   vim.bo[bufnr].buftype = 'nofile'
-   vim.bo[bufnr].bufhidden = 'hide'
-   vim.bo[bufnr].swapfile = false
-   vim.bo[bufnr].modifiable = false
-
-   -- Set buffer name (wrap in pcall to handle test environment limitations)
-   pcall(vim.api.nvim_buf_set_name, bufnr, bufname)
-
-    -- Open buffer according to open_mode
-    local winnr
-    if open_mode == 'float' then
-      local float_opts = vim.tbl_extend('keep', window_options or {}, { title = 'History - ' .. workflow_file })
-      winnr = M.open_window(open_mode, bufnr, float_opts)
+      return existing_bufnr, winid
     else
-      M.open_window(open_mode)
-      winnr = vim.api.nvim_get_current_win()
-      vim.api.nvim_win_set_buf(winnr, bufnr)
-    end
-
-    -- Apply window options to window (only for non-floating windows)
-    if window_options and open_mode ~= 'float' then
-      for option, value in pairs(window_options) do
-        vim.wo[winnr][option] = value
+      if buffer_data[existing_bufnr] then
+        buffer_data[existing_bufnr].open_mode = open_mode
+      end
+      if open_mode == 'float' then
+        local float_opts = vim.tbl_extend('keep', window_options or {}, { title = 'History - ' .. workflow_file })
+        local new_winid = M.open_window(open_mode, existing_bufnr, float_opts)
+        return existing_bufnr, new_winid
+      else
+        M.open_window(open_mode)
+        local new_winid = vim.api.nvim_get_current_win()
+        vim.api.nvim_win_set_buf(new_winid, existing_bufnr)
+        -- Apply window options to new window
+        if window_options then
+          for option, value in pairs(window_options) do
+            vim.wo[new_winid][option] = value
+          end
+        end
+        return existing_bufnr, new_winid
       end
     end
+  end
+
+  -- Create a new buffer (listed by default to avoid [No Name] buffers)
+  local bufnr = vim.api.nvim_create_buf(buflisted, true)
+
+  -- Set buffer options
+  vim.bo[bufnr].buftype = 'nofile'
+  vim.bo[bufnr].bufhidden = 'hide'
+  vim.bo[bufnr].swapfile = false
+  vim.bo[bufnr].modifiable = false
+
+  -- Set buffer name (wrap in pcall to handle test environment limitations)
+  pcall(vim.api.nvim_buf_set_name, bufnr, bufname)
+
+  -- Open buffer according to open_mode
+  local winnr
+  if open_mode == 'float' then
+    local float_opts = vim.tbl_extend('keep', window_options or {}, { title = 'History - ' .. workflow_file })
+    winnr = M.open_window(open_mode, bufnr, float_opts)
+  else
+    M.open_window(open_mode)
+    winnr = vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_buf(winnr, bufnr)
+  end
+
+  -- Apply window options to window (only for non-floating windows)
+  if window_options and open_mode ~= 'float' then
+    for option, value in pairs(window_options) do
+      vim.wo[winnr][option] = value
+    end
+  end
 
   -- Get keymaps from config (use custom if provided, otherwise defaults)
   local default_list_keymaps = assert(defaults.history.keymaps.list, 'default list keymaps must exist')

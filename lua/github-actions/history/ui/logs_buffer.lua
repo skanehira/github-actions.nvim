@@ -130,15 +130,12 @@ function M.create_buffer(title, run_id, opts)
   local existing_bufnr = buffer_utils.find_buffer_by_name(bufname)
   if existing_bufnr then
     -- Buffer exists, focus on it or create window for it
-    local winnr = focus_or_create_window(
-      existing_bufnr,
-      {
-        logs_fold_by_default = opts.logs_fold_by_default,
-        open_mode = open_mode,
-        window_options = window_options,
-        title = built_title,
-      }
-    )
+    local winnr = focus_or_create_window(existing_bufnr, {
+      logs_fold_by_default = opts.logs_fold_by_default,
+      open_mode = open_mode,
+      window_options = window_options,
+      title = built_title,
+    })
     return existing_bufnr, winnr, true
   end
 
@@ -152,15 +149,12 @@ function M.create_buffer(title, run_id, opts)
     vim.api.nvim_buf_delete(bufnr, { force = true })
     existing_bufnr = buffer_utils.find_buffer_by_name(bufname)
     if existing_bufnr then
-      local winnr = focus_or_create_window(
-        existing_bufnr,
-        {
-          logs_fold_by_default = opts.logs_fold_by_default,
-          open_mode = open_mode,
-          window_options = window_options,
-          title = built_title,
-        }
-      )
+      local winnr = focus_or_create_window(existing_bufnr, {
+        logs_fold_by_default = opts.logs_fold_by_default,
+        open_mode = open_mode,
+        window_options = window_options,
+        title = built_title,
+      })
       return existing_bufnr, winnr, true
     else
       -- This shouldn't happen, but handle it gracefully
@@ -176,15 +170,12 @@ function M.create_buffer(title, run_id, opts)
   vim.bo[bufnr].modifiable = false
 
   -- Create window and set up folding
-  local winnr = focus_or_create_window(
-    bufnr,
-    {
-      logs_fold_by_default = opts.logs_fold_by_default,
-      open_mode = open_mode,
-      window_options = window_options,
-      title = built_title,
-    }
-  )
+  local winnr = focus_or_create_window(bufnr, {
+    logs_fold_by_default = opts.logs_fold_by_default,
+    open_mode = open_mode,
+    window_options = window_options,
+    title = built_title,
+  })
 
   -- Get keymaps from config (use custom if provided, otherwise defaults)
   local default_logs_keymaps = assert(defaults.history.keymaps.logs, 'default logs keymaps must exist')

@@ -59,7 +59,7 @@ describe('history.ui.runs_buffer - float mode', function()
         width = 50,
         height = 20,
         row = 10,
-        col = 10
+        col = 10,
       }
 
       runs_buffer.open_window('float', test_bufnr, custom_opts)
