@@ -1,3 +1,21 @@
+---@class TerminalOpenOptions
+---@field window_options? (FloatWindowOptions|table<string, any>) Float geometry or window-local options
+---@field title? string Window title (float mode only)
+---@field on_exit? fun() Callback invoked (via vim.schedule) when terminal exits
+
+---Closes a terminal, the buffer and stops the job
+---@param winid integer
+local function close_terminal_buffer_job(winid)
+  if vim.api.nvim_win_is_valid(winid) then
+    vim.api.nvim_win_close(winid, true)
+  end
+
+  local bufnr = vim.api.nvim_get_current_buf()
+  if vim.api.nvim_buf_is_valid(bufnr) then
+    vim.api.nvim_buf_delete(bufnr, { force = true })
+  end
+end
+
 ---@class BufferUtils
 local M = {}
 
@@ -91,23 +109,18 @@ function M.open_float_window(bufnr, opts)
   end
 
   local winid = vim.api.nvim_open_win(bufnr, true, win_config)
-  for k, v in pairs(opts) do
-    if k ~= 'width' and k ~= 'height' and k ~= 'row' and k ~= 'col' and k ~= 'title' then
-      pcall(function()
-        vim.wo[winid][k] = v
-      end)
-    end
+  for key, value in pairs(opts) do
+    pcall(function()
+      vim.wo[winid][key] = value
+    end)
   end
   return winid
 end
 
 ---Open a terminal in the specified mode (float, tab, vsplit, split, current)
 ---@param mode string Open mode: "tab", "vsplit", "split", "current", or "float"
----@param cmd table Command to run (list of strings, used directly for termopen in float mode)
----@param opts? table Options
----@param opts.window_options? table Float geometry and window options (width, height, row, col, etc.)
----@param opts.title? string Window title (float mode only)
----@param opts.on_exit? function Callback invoked (via vim.schedule) when terminal exits
+---@param cmd table Command to run (list of strings)
+---@param opts? TerminalOpenOptions
 ---@return number bufnr, number winid
 function M.open_terminal(mode, cmd, opts)
   opts = opts or {}
@@ -127,16 +140,13 @@ function M.open_terminal(mode, cmd, opts)
     vim.cmd('split')
   end
 
-  local cmd_str
-  if #cmd == 1 then
-    cmd_str = cmd[1]
-  else
-    cmd_str = table.concat(cmd, ' ')
-  end
-  vim.cmd(string.format('terminal %s', cmd_str))
-
   local bufnr = vim.api.nvim_get_current_buf()
   local winid = vim.api.nvim_get_current_win()
+
+  local ok = vim.fn.jobstart(cmd, { term = true })
+  if ok == -1 then
+    vim.notify('[GitHub Actions] Failed to start terminal', vim.log.levels.ERROR)
+  end
 
   if opts.on_exit then
     vim.api.nvim_create_autocmd('TermClose', {
@@ -156,11 +166,8 @@ end
 ---Open a terminal in a floating window with auto-close behavior
 ---Creates a new buffer, opens it in a float, starts the given terminal command,
 ---binds 'q' to close the window, and auto-closes when the terminal process exits.
----@param cmd table Command to run (list of strings, passed to vim.fn.termopen)
----@param opts? table Options
----@param opts.window_options? table Float geometry and window options (width, height, row, col, title, etc.)
----@param opts.title? string Window title (merged into window_options)
----@param opts.on_exit? function Callback invoked (via vim.schedule) when terminal exits
+---@param cmd table Command to run (list of strings)
+---@param opts? TerminalOpenOptions
 ---@return number bufnr, number winid
 function M.open_terminal_float(cmd, opts)
   opts = opts or {}
@@ -168,19 +175,22 @@ function M.open_terminal_float(cmd, opts)
   local title = opts.title
   local float_opts = vim.tbl_extend('keep', opts.window_options or {}, { title = title })
   local winid = M.open_float_window(bufnr, float_opts)
-  pcall(vim.fn.termopen, cmd)
+
+  local ok = vim.fn.jobstart(cmd, { term = true })
+  if ok == -1 then
+    vim.notify('[GitHub Actions] Failed to start terminal', vim.log.levels.ERROR)
+  end
+
   vim.keymap.set('n', 'q', function()
-    if vim.api.nvim_win_is_valid(winid) then
-      vim.api.nvim_win_close(winid, true)
-    end
+    close_terminal_buffer_job(winid)
   end, { buffer = bufnr, noremap = true, silent = true })
+
   vim.api.nvim_create_autocmd('TermClose', {
     buffer = bufnr,
     once = true,
     callback = function()
-      if vim.api.nvim_win_is_valid(winid) then
-        vim.api.nvim_win_close(winid, true)
-      end
+      close_terminal_buffer_job(winid)
+
       if opts.on_exit then
         vim.schedule(opts.on_exit)
       end

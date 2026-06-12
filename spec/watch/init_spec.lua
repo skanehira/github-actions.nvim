@@ -15,6 +15,13 @@ describe('watch.init', function()
     end)
   end
 
+  local mocks = {}
+
+  local function setup_mock(target, key, mock_fn)
+    table.insert(mocks, { target = target, key = key, original = target[key] })
+    target[key] = mock_fn
+  end
+
   before_each(function()
     package.loaded['github-actions.watch'] = nil
     package.loaded['github-actions.shared.picker'] = nil
@@ -27,6 +34,13 @@ describe('watch.init', function()
     api = require('github-actions.history.api')
     filter = require('github-actions.watch.filter')
     run_picker = require('github-actions.watch.run_picker')
+  end)
+
+  after_each(function()
+    for _, mock in ipairs(mocks) do
+      mock.target[mock.key] = mock.original
+    end
+    mocks = {}
   end)
 
   describe('watch_workflow', function()
@@ -95,6 +109,11 @@ describe('watch.init', function()
       local picker_stub = stub(picker, 'select_workflow_files')
       local api_stub = stub(api, 'fetch_runs')
       local cmd_stub = stub(vim, 'cmd')
+      local jobstart_args = nil
+      setup_mock(vim.fn, 'jobstart', function(cmd, _)
+        jobstart_args = cmd
+        return 1
+      end)
 
       picker_stub.invokes(function(opts)
         opts.on_select({ '.github/workflows/ci.yml' })
@@ -119,18 +138,17 @@ describe('watch.init', function()
       assert.stub(cmd_stub).was_called()
       local cmd_calls = cmd_stub.calls
       local found_tabnew = false
-      local found_terminal = false
       for _, call in ipairs(cmd_calls) do
-        local arg = call.vals[1]
-        if arg:match('tabnew') then
+        if call.vals[1]:match('tabnew') then
           found_tabnew = true
-        end
-        if arg:match('terminal') and arg:match('gh run watch') and arg:match('12345') then
-          found_terminal = true
         end
       end
       assert.is_true(found_tabnew, 'Should open new tab')
-      assert.is_true(found_terminal, 'Should launch gh run watch terminal')
+      assert.is_not_nil(jobstart_args)
+      assert.equals('gh', jobstart_args[1])
+      assert.equals('run', jobstart_args[2])
+      assert.equals('watch', jobstart_args[3])
+      assert.equals('12345', jobstart_args[4])
 
       picker_stub:revert()
       api_stub:revert()
@@ -182,7 +200,11 @@ describe('watch.init', function()
       local picker_stub = stub(picker, 'select_workflow_files')
       local api_stub = stub(api, 'fetch_runs')
       local run_picker_stub = stub(run_picker, 'select_run')
-      local cmd_stub = stub(vim, 'cmd')
+      local jobstart_args = nil
+      setup_mock(vim.fn, 'jobstart', function(cmd, _)
+        jobstart_args = cmd
+        return 1
+      end)
 
       picker_stub.invokes(function(opts)
         opts.on_select({ '.github/workflows/ci.yml' })
@@ -208,29 +230,21 @@ describe('watch.init', function()
       end)
 
       run_picker_stub.invokes(function(opts)
-        -- User selects second run
         opts.on_select(opts.runs[2])
       end)
 
       watch.watch_workflow({})
       flush_scheduled()
 
-      -- Should launch terminal with selected run ID
-      assert.stub(cmd_stub).was_called()
-      local cmd_calls = cmd_stub.calls
-      local found_terminal = false
-      for _, call in ipairs(cmd_calls) do
-        local arg = call.vals[1]
-        if arg:match('terminal') and arg:match('gh run watch') and arg:match('200') then
-          found_terminal = true
-        end
-      end
-      assert.is_true(found_terminal, 'Should launch terminal with run ID 200')
+      assert.is_not_nil(jobstart_args)
+      assert.equals('gh', jobstart_args[1])
+      assert.equals('run', jobstart_args[2])
+      assert.equals('watch', jobstart_args[3])
+      assert.equals('200', jobstart_args[4])
 
       picker_stub:revert()
       api_stub:revert()
       run_picker_stub:revert()
-      cmd_stub:revert()
     end)
 
     it('should show error when API call fails', function()
@@ -306,20 +320,17 @@ describe('watch.init', function()
       local picker_stub = stub(picker, 'select_workflow_files')
       local api_stub = stub(api, 'fetch_runs')
 
-      -- Mock float window creation
-      local original_open_win = vim.api.nvim_open_win
       local captured_float_opts = nil
-      vim.api.nvim_open_win = function(bufnr, _, opts)
+      setup_mock(vim.api, 'nvim_open_win', function(bufnr, _, opts)
         captured_float_opts = opts
         return 1001
-      end
+      end)
 
-      -- Capture termopen command
-      local original_termopen = vim.fn.termopen
-      local termopen_args = nil
-      vim.fn.termopen = function(cmd)
-        termopen_args = cmd
-      end
+      local jobstart_args = nil
+      setup_mock(vim.fn, 'jobstart', function(cmd, _)
+        jobstart_args = cmd
+        return 1
+      end)
 
       picker_stub.invokes(function(opts)
         opts.on_select({ '.github/workflows/ci.yml' })
@@ -340,23 +351,18 @@ describe('watch.init', function()
       watch.watch_workflow({ open_mode = 'float' })
       flush_scheduled()
 
-      -- Verify float window config
       assert.is_not_nil(captured_float_opts)
       assert.equals('editor', captured_float_opts.relative)
       assert.equals('minimal', captured_float_opts.style)
       assert.equals('rounded', captured_float_opts.border)
       assert.equals('Watch - ci.yml', captured_float_opts.title)
 
-      -- Verify termopen was called with the right command
-      assert.is_not_nil(termopen_args)
-      assert.equals('gh', termopen_args[1])
-      assert.equals('run', termopen_args[2])
-      assert.equals('watch', termopen_args[3])
-      assert.equals('12345', termopen_args[4])
+      assert.is_not_nil(jobstart_args)
+      assert.equals('gh', jobstart_args[1])
+      assert.equals('run', jobstart_args[2])
+      assert.equals('watch', jobstart_args[3])
+      assert.equals('12345', jobstart_args[4])
 
-      -- Restore mocks
-      vim.api.nvim_open_win = original_open_win
-      vim.fn.termopen = original_termopen
       picker_stub:revert()
       api_stub:revert()
     end)
@@ -365,14 +371,14 @@ describe('watch.init', function()
       local picker_stub = stub(picker, 'select_workflow_files')
       local api_stub = stub(api, 'fetch_runs')
 
-      -- Mock float window creation
-      local original_open_win = vim.api.nvim_open_win
       local captured_float_opts = nil
-      vim.api.nvim_open_win = function(bufnr, _, opts)
+      setup_mock(vim.api, 'nvim_open_win', function(bufnr, _, opts)
         captured_float_opts = opts
         return 1001
-      end
-      vim.fn.termopen = function(_) end
+      end)
+      setup_mock(vim.fn, 'jobstart', function(_)
+        return 1
+      end)
 
       picker_stub.invokes(function(opts)
         opts.on_select({ '.github/workflows/ci.yml' })
@@ -407,8 +413,6 @@ describe('watch.init', function()
       assert.equals(5, captured_float_opts.row)
       assert.equals(10, captured_float_opts.col)
 
-      vim.api.nvim_open_win = original_open_win
-      vim.fn.termopen = nil
       picker_stub:revert()
       api_stub:revert()
     end)

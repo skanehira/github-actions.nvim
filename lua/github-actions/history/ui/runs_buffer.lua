@@ -110,8 +110,8 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
   vim.bo[bufnr].swapfile = false
   vim.bo[bufnr].modifiable = false
 
-  -- Set buffer name (wrap in pcall to handle test environment limitations)
-  pcall(vim.api.nvim_buf_set_name, bufnr, bufname)
+  -- Set buffer name
+  vim.api.nvim_buf_set_name(bufnr, bufname)
 
   -- Open buffer according to open_mode
   local winnr
@@ -142,6 +142,8 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
     branch = branch,
     open_mode = open_mode,
     window_options = window_options,
+    watch_open_mode = opts.watch_open_mode,
+    watch_window_options = opts.watch_window_options,
   }
 
   -- Set up keymaps
@@ -312,12 +314,11 @@ local function watch_run(bufnr)
   end
 
   local history_winid = vim.api.nvim_get_current_win()
-  local watch_cfg = config.get_watch_buffer_config()
-  local mode = watch_cfg.open_mode or data.open_mode or 'tab'
+  local mode = data.watch_open_mode or data.open_mode or 'tab'
   local title = data.workflow_file and ('Watch - ' .. data.workflow_file) or ('gh run watch ' .. run.databaseId)
 
   buffer_utils.open_terminal(mode, { 'gh', 'run', 'watch', tostring(run.databaseId) }, {
-    window_options = watch_cfg.window_options,
+    window_options = data.watch_window_options,
     title = title,
     on_exit = function()
       if vim.api.nvim_buf_is_valid(bufnr) then
@@ -663,6 +664,8 @@ function M.render(bufnr, runs, custom_icons, custom_highlights)
     branch = existing_data.branch,
     open_mode = existing_data.open_mode,
     window_options = existing_data.window_options,
+    watch_open_mode = existing_data.watch_open_mode,
+    watch_window_options = existing_data.watch_window_options,
     runs = runs,
     custom_icons = custom_icons,
     custom_highlights = custom_highlights,

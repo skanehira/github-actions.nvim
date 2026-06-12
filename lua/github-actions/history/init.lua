@@ -15,11 +15,14 @@ local function show_history_for_file(workflow_filepath, custom_icons, custom_hig
   local workflow_file = workflow_filepath:match('[^/]+%.ya?ml$')
 
   local hist_buffer_cfg = buffer_config and buffer_config.history or {}
+  local watch_cfg = buffer_config and buffer_config.watch or {}
   local opts = {
     custom_keymaps = custom_keymaps and custom_keymaps.list or nil,
     open_mode = hist_buffer_cfg.open_mode,
     buflisted = hist_buffer_cfg.buflisted,
     window_options = hist_buffer_cfg.window_options,
+    watch_open_mode = watch_cfg.open_mode,
+    watch_window_options = watch_cfg.window_options,
   }
   local hist_bufnr, _ = runs_buffer.create_buffer(workflow_file, workflow_filepath, opts)
   runs_buffer.show_loading(hist_bufnr)

@@ -1,5 +1,4 @@
 local buffer_utils = require('github-actions.shared.buffer_utils')
-local config = require('github-actions.config')
 
 ---@class LogsBuffer
 local M = {}
@@ -36,6 +35,8 @@ local function focus_or_create_window(bufnr, opts)
   local open_mode = opts.open_mode or 'vsplit'
 
   -- Create new window according to open_mode
+  local winnr
+
   if open_mode == 'tab' then
     vim.cmd('tabnew')
   elseif open_mode == 'vsplit' then
@@ -45,13 +46,15 @@ local function focus_or_create_window(bufnr, opts)
   elseif open_mode == 'float' then
     local title = opts.title or ''
     local float_opts = vim.tbl_extend('keep', opts.window_options or {}, { title = title })
-    return buffer_utils.open_float_window(bufnr, float_opts)
+    winnr = buffer_utils.open_float_window(bufnr, float_opts)
   elseif open_mode ~= 'current' then
     vim.cmd('vsplit')
   end
 
-  local winnr = vim.api.nvim_get_current_win()
-  vim.api.nvim_win_set_buf(winnr, bufnr)
+  if open_mode ~= 'float' then
+    winnr = vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_buf(winnr, bufnr)
+  end
 
   -- Set up folding options for the window
   local fold_by_default = opts.logs_fold_by_default
@@ -65,7 +68,9 @@ local function focus_or_create_window(bufnr, opts)
   -- Apply window options
   if opts.window_options then
     for option, value in pairs(opts.window_options) do
-      vim.wo[option] = value
+      pcall(function()
+        vim.wo[option] = value
+      end)
     end
   end
 
@@ -254,7 +259,7 @@ function M.render(bufnr, logs)
 
   -- Add keymap help text at the top (using configured keymaps)
   local data = buffer_data[bufnr]
-  local defaults = config.get_defaults()
+  local defaults = require('github-actions.config').get_defaults()
   local default_logs_keymaps = assert(defaults.history.keymaps.logs, 'default logs keymaps must exist')
   ---@type HistoryLogsKeymaps
   local keymaps = (data and data.keymaps) or default_logs_keymaps

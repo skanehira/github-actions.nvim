@@ -9,7 +9,7 @@ local buffer_utils = require('github-actions.shared.buffer_utils')
 ---@field icons? HistoryIcons Icon configuration (reuses config.history.icons)
 ---@field highlights? HistoryHighlights Highlight configuration (reuses config.history.highlights)
 ---@field open_mode? string How to open watch terminal: "tab", "vsplit", "split", "current", "float"
----@field window_options? table<string, any> Window options for float mode (width, height, row, col)
+---@field window_options? FloatWindowOptions Window options for float mode (width, height, row, col)
 
 local M = {}
 
@@ -34,8 +34,8 @@ function M.watch_workflow(opts)
   -- Get default configuration
   local defaults = config_module.get_defaults()
   local icons = config_module.merge_icons(defaults.history.icons, opts.icons)
-  local open_mode = opts.open_mode or defaults.watch.open_mode
-  local window_options = opts.window_options or defaults.watch.window_options
+  local open_mode = opts.open_mode or 'tab'
+  local window_options = opts.window_options or {}
 
   -- Step 1: Select workflow file
   picker.select_workflow_files({

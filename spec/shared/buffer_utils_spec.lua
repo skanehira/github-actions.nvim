@@ -1,4 +1,4 @@
-require('spec.minimal_init')
+dofile('spec/minimal_init.lua')
 
 describe('shared.buffer_utils', function()
   local buffer_utils = require('github-actions.shared.buffer_utils')
@@ -160,9 +160,9 @@ describe('shared.buffer_utils', function()
         captured_float_opts = opts
         return 1001
       end)
-      local termopen_called = false
-      setup_mock(vim.fn, 'termopen', function(cmd)
-        termopen_called = true
+      local jobstart_called = false
+      setup_mock(vim.fn, 'jobstart', function(cmd, _)
+        jobstart_called = true
         assert.equals('gh', cmd[1])
         assert.equals('run', cmd[2])
         assert.equals('watch', cmd[3])
@@ -176,7 +176,7 @@ describe('shared.buffer_utils', function()
 
       assert.is_not_nil(bufnr)
       assert.equals(1001, winid)
-      assert.is_true(termopen_called)
+      assert.is_true(jobstart_called)
       assert.equals('Watch - ci.yml', captured_float_opts.title)
     end)
 
@@ -184,7 +184,7 @@ describe('shared.buffer_utils', function()
       setup_mock(vim.api, 'nvim_open_win', function(_, _, _)
         return 1001
       end)
-      setup_mock(vim.fn, 'termopen', function() end)
+      setup_mock(vim.fn, 'jobstart', function() end)
 
       local on_exit_called = false
       local bufnr, _ = buffer_utils.open_terminal_float({ 'gh', 'run', 'watch', '12345' }, {
