@@ -132,13 +132,6 @@ end
 ---@return number bufnr, number winid
 function M.open_terminal(mode, cmd, opts)
   opts = opts or {}
-  if mode == 'float' then
-    return M.open_terminal_float(cmd, {
-      window_options = opts.window_options,
-      title = opts.title,
-      on_exit = opts.on_exit,
-    })
-  end
 
   if mode == 'tab' then
     vim.cmd('tabnew')
@@ -146,10 +139,19 @@ function M.open_terminal(mode, cmd, opts)
     vim.cmd('vsplit')
   elseif mode == 'split' then
     vim.cmd('split')
+  elseif mode == 'float' then
+    return M.open_terminal_float(cmd, {
+      window_options = opts.window_options,
+      title = opts.title,
+      on_exit = opts.on_exit,
+    })
   end
 
-  local bufnr = vim.api.nvim_get_current_buf()
+  -- Create a new empty buffer for the terminal (vsplit/split shows the current
+  -- buffer by default, which causes jobstart issues with non-empty buffers)
+  local bufnr = vim.api.nvim_create_buf(false, true)
   local winid = vim.api.nvim_get_current_win()
+  vim.api.nvim_win_set_buf(winid, bufnr)
 
   local ok = vim.fn.jobstart(cmd, { term = true })
   if ok == -1 then
