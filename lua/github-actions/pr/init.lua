@@ -27,12 +27,15 @@ local function show_history_for_branch(branch, history_config)
   local buffer_config = history_config.buffer
 
   local hist_buffer_cfg = buffer_config and buffer_config.history or {}
+  local watch_cfg = buffer_config and buffer_config.watch or {}
   local opts = {
     custom_keymaps = custom_keymaps and custom_keymaps.list or nil,
     branch = branch,
     open_mode = hist_buffer_cfg.open_mode,
     buflisted = hist_buffer_cfg.buflisted,
     window_options = hist_buffer_cfg.window_options,
+    watch_open_mode = watch_cfg.open_mode_history,
+    watch_window_options = watch_cfg.window_options,
   }
   local hist_bufnr, _ = runs_buffer.create_buffer(branch, nil, opts)
   runs_buffer.show_loading(hist_bufnr)

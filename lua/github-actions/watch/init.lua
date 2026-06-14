@@ -20,9 +20,9 @@ local M = {}
 ---@param workflow_file? string Workflow filename for display title
 local function launch_watch_terminal(run_id, open_mode, window_options, workflow_file)
   local title = workflow_file and ('Watch - ' .. workflow_file) or ('gh run watch ' .. run_id)
+  local opts = vim.tbl_extend('keep', window_options or {}, { title = title })
   buffer_utils.open_terminal(open_mode or 'tab', { 'gh', 'run', 'watch', tostring(run_id) }, {
-    window_options = window_options or {},
-    title = title,
+    window_options = opts,
   })
 end
 

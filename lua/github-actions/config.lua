@@ -1,4 +1,4 @@
----@class VirtualTextIcons
+---@class virtualTextIcons
 ---@field outdated? string Icon for outdated versions (default: " ")
 ---@field latest? string Icon for latest versions (default: " ")
 ---@field error? string Icon for errors (default: " ")
@@ -67,10 +67,15 @@
 ---@field buflisted? boolean Whether buffer should be listed in buffer list (default: true)
 ---@field window_options? (FloatWindowOptions|table<string, any>) Float geometry or window-local options (e.g., {wrap = false, number = true})
 
+---@class WatchBufferOptions
+---@field open_mode? string How to open buffer: "tab", "vsplit", "split", "current", or "float"
+---@field open_mode_history? string How to open buffer: "tab", "vsplit", "split", "current", or "float" from the history buffer
+---@field window_options? (FloatWindowOptions|table<string, any>) Float geometry or window-local options (e.g., {wrap = false, number = true})
+
 ---@class HistoryBufferOptions
 ---@field history? BufferOpenOptions History buffer options (default: open_mode="tab", window_options={wrap=true})
 ---@field logs? BufferOpenOptions Options for logs buffer (default: open_mode="vsplit", window_options={wrap=false})
----@field watch? BufferOpenOptions Options for watch terminal (default: open_mode="tab")
+---@field watch? WatchBufferOptions Options for watch terminal (default: open_mode="tab")
 
 ---@class HistoryOptions
 ---@field highlight_colors? HistoryHighlightOptions Highlight color options for workflow history display (global setup)
@@ -78,6 +83,7 @@
 ---@field icons? HistoryIcons Icon options for workflow history display
 ---@field keymaps? HistoryKeymaps Keymap options for history buffers
 ---@field logs_fold_by_default? boolean Whether to fold log groups by default (default: true)
+---@filed pr_mode? boolean Whether to show the pr history intead
 ---@field buffer? HistoryBufferOptions Buffer display options
 
 ---@class GithubActionsConfig
@@ -146,6 +152,7 @@ local defaults = {
       },
     },
     logs_fold_by_default = true,
+    -- pr_mode = false,
     buffer = {
       history = {
         open_mode = 'tab',
@@ -162,6 +169,8 @@ local defaults = {
         },
       },
       watch = {
+        open_mode = 'tab',
+        open_mode_history = 'vsplit',
         window_options = {},
       },
     },

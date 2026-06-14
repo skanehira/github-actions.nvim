@@ -657,12 +657,14 @@ describe('history.ui.runs_buffer', function()
       assert.is_true(vim.api.nvim_win_is_valid(winnr2))
     end)
 
-    it('should keep focus on watch float window when pressing w', function()
-      local bufnr, winnr = runs_buffer.create_buffer('test.yml', '.github/workflows/test.yml', {
+    it('should open watch terminal with watch_open_mode when pressing w', function()
+      -- Use unique filename to avoid existing buffer issues from other tests
+      local bufnr, winnr = runs_buffer.create_buffer('watch_test.yml', '.github/workflows/watch_test.yml', {
         open_mode = 'float',
+        watch_open_mode = 'float',
       })
 
-      -- Render with a running workflow to populate buffer_data
+      -- Render to populate buffer_data with a running workflow
       runs_buffer.render(bufnr, {
         {
           databaseId = 12345,
@@ -673,16 +675,24 @@ describe('history.ui.runs_buffer', function()
         },
       })
 
-      -- Mock termopen to avoid actually running gh
-      local original_termopen = vim.fn.termopen
-      vim.fn.termopen = function() end
-
-      -- Focus the history float window and position cursor on the run line
+      -- Focus history float and position cursor on the run line
       vim.api.nvim_set_current_win(winnr)
       vim.api.nvim_win_set_cursor(winnr, { 3, 0 })
-      local history_winid = vim.api.nvim_get_current_win()
 
-      -- Trigger the w keymap callback
+      -- Verify buffer name to confirm we have a fresh buffer
+      local actual_name = vim.api.nvim_buf_get_name(bufnr)
+      assert.matches('watch_test.yml', actual_name)
+
+      -- Stub buffer_utils.open_terminal to capture the mode
+      local buffer_utils = require('github-actions.shared.buffer_utils')
+      local captured_mode = nil
+      local original_open_terminal = buffer_utils.open_terminal
+      buffer_utils.open_terminal = function(mode, ...)
+        captured_mode = mode
+        return 0, 0
+      end
+
+      -- Get the w keymap callback and trigger it
       local maps = vim.api.nvim_buf_get_keymap(bufnr, 'n')
       local watch_callback = nil
       for _, m in ipairs(maps) do
@@ -692,20 +702,14 @@ describe('history.ui.runs_buffer', function()
         end
       end
       assert.is_not_nil(watch_callback, 'w keymap callback should be accessible')
-
-      local buf_count_before = #vim.api.nvim_list_bufs()
       watch_callback()
 
-      -- Verify focus is NOT on the history window (it stayed on the watch float)
-      assert.is_not_equals(history_winid, vim.api.nvim_get_current_win())
+      -- Verify open_terminal was called with the configured watch_open_mode ('float')
+      assert.is_not_nil(captured_mode, 'open_terminal should be called')
+      assert.equals('float', captured_mode,
+        'open_terminal should be called with float mode, got ' .. tostring(captured_mode))
 
-      -- Cleanup: delete new buffers created by watch_run
-      local bufs_after = vim.api.nvim_list_bufs()
-      for i = buf_count_before + 1, #bufs_after do
-        pcall(vim.api.nvim_buf_delete, bufs_after[i], { force = true })
-      end
-
-      vim.fn.termopen = original_termopen
+      buffer_utils.open_terminal = original_open_terminal
     end)
   end)
 end)

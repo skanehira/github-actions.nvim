@@ -217,7 +217,6 @@ The `:GithubActionsHistoryByPR` command allows you to view workflow run history 
 6. Press `d` to dispatch the current workflow (with inputs and branch selection)
 7. Press `w` to watch a running workflow (only for in_progress or queued runs)
    - Opens a terminal running `gh run watch <run-id>`
-   - The watch terminal defaults to the history buffer's open mode by default; configure separately with `history.buffer.watch.open_mode`
    - Returns focus to history buffer in normal mode
    - Auto-refreshes history when watch completes
 8. Press `C` to cancel a running workflow (only for in_progress or queued runs)
