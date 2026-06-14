@@ -657,7 +657,7 @@ describe('history.ui.runs_buffer', function()
       assert.is_true(vim.api.nvim_win_is_valid(winnr2))
     end)
 
-    it('should open watch terminal with watch_open_mode when pressing w', function()
+    it('should open watch on float mode', function()
       -- Use unique filename to avoid existing buffer issues from other tests
       local bufnr, winnr = runs_buffer.create_buffer('watch_test.yml', '.github/workflows/watch_test.yml', {
         open_mode = 'float',
@@ -706,8 +706,11 @@ describe('history.ui.runs_buffer', function()
 
       -- Verify open_terminal was called with the configured watch_open_mode ('float')
       assert.is_not_nil(captured_mode, 'open_terminal should be called')
-      assert.equals('float', captured_mode,
-        'open_terminal should be called with float mode, got ' .. tostring(captured_mode))
+      assert.equals(
+        'float',
+        captured_mode,
+        'open_terminal should be called with float mode, got ' .. tostring(captured_mode)
+      )
 
       buffer_utils.open_terminal = original_open_terminal
     end)

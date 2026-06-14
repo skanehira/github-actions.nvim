@@ -118,6 +118,12 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
   local default_list_keymaps = assert(defaults.history.keymaps.list, 'default list keymaps must exist')
   local keymaps = vim.tbl_deep_extend('force', default_list_keymaps, custom_keymaps or {})
 
+  -- Float windows does not support vsplit mode, so if history is float watch must open in float regardless the configuration
+  local watch_open_mode = (open_mode == 'float' and 'float')
+    or opts.watch_open_mode
+    or watch_buffer_config.open_mode_history
+    or 'vsplit'
+
   buffer_data[bufnr] = {
     workflow_file = workflow_file,
     workflow_filepath = workflow_filepath,
@@ -125,7 +131,7 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
     branch = branch,
     open_mode = open_mode,
     window_options = window_options,
-    watch_open_mode = opts.watch_open_mode or watch_buffer_config.open_mode_history or 'tab',
+    watch_open_mode = watch_open_mode,
     watch_window_options = opts.watch_window_options or watch_buffer_config.window_options,
   }
 
@@ -498,9 +504,13 @@ end
 function M.setup_keymaps(bufnr, keymaps)
   local opts = { buffer = bufnr, noremap = true, silent = true }
 
-  -- Close buffer
+  -- Close buffer and its window
   vim.keymap.set('n', keymaps.close, function()
-    vim.api.nvim_buf_delete(bufnr, { force = true })
+    local winid = vim.api.nvim_get_current_win()
+    if vim.api.nvim_win_is_valid(winid) then
+      vim.api.nvim_win_close(winid, true)
+    end
+    pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
   end, opts)
 
   -- Toggle expand/collapse

@@ -3,16 +3,24 @@
 ---@field title? string Window title (float mode only)
 ---@field on_exit? fun() Callback invoked (via vim.schedule) when terminal exits
 
----Closes a terminal, the buffer and stops the job
+---Closes a terminal window and its buffer
 ---@param winid integer
-local function close_terminal_buffer_job(winid)
+---@param bufnr? number Buffer number (captured before win close to avoid focus shift)
+local function close_terminal_buffer_job(winid, bufnr)
+  bufnr = bufnr or vim.api.nvim_get_current_buf()
+
   if vim.api.nvim_win_is_valid(winid) then
     vim.api.nvim_win_close(winid, true)
   end
 
-  local bufnr = vim.api.nvim_get_current_buf()
+  -- Schedule buffer deletion to avoid E937 when called from TermClose autocommand
+  -- (Neovim refuses to delete a buffer while its own TermClose is running)
   if vim.api.nvim_buf_is_valid(bufnr) then
-    vim.api.nvim_buf_delete(bufnr, { force = true })
+    vim.schedule(function()
+      if vim.api.nvim_buf_is_valid(bufnr) then
+        pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
+      end
+    end)
   end
 end
 
@@ -182,14 +190,14 @@ function M.open_terminal_float(cmd, opts)
   end
 
   vim.keymap.set('n', 'q', function()
-    close_terminal_buffer_job(winid)
+    close_terminal_buffer_job(winid, bufnr)
   end, { buffer = bufnr, noremap = true, silent = true })
 
   vim.api.nvim_create_autocmd('TermClose', {
     buffer = bufnr,
     once = true,
     callback = function()
-      close_terminal_buffer_job(winid)
+      close_terminal_buffer_job(winid, bufnr)
 
       if opts.on_exit then
         vim.schedule(opts.on_exit)
