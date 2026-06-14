@@ -133,6 +133,8 @@ require('github-actions').setup({
         },
       },
       watch = {
+        open_mode = 'tab',    -- How to open watch buffer: 'tab', 'vsplit', 'split', 'current', or 'float' (default: 'tab')
+        open_mode_history = 'float',    -- How to open watch buffer from the history buffer: 'tab', 'vsplit', 'split', 'current', or 'float' (default: 'tab')
         window_options = {},  -- Float window options: width, height, row, col (default: 80% centered)
       },
       logs = {
@@ -185,7 +187,8 @@ The `:GithubActionsWatch` command allows you to monitor running workflow executi
    - If exactly one running workflow: Launch `gh run watch` directly in a new tab
    - If multiple running workflows: Show a picker to select which one to watch
 4. The watch terminal opens with `gh run watch <run-id>` (mode: `tab`, `vsplit`, `split`, `current`, or `float`)
-5. Exit the terminal with `Ctrl-C` or close the tab/window when done
+5. If the watch terminal is opened from the history buffer it will open with the mode defined by open_mode_history instead, nonetheless if the history buffer has open_mode = 'float' the watch buffer will ignore open_mode_history and open in a float window (float windows do not support split or history will overlay if open_mode_history = 'tab' | 'current')
+6. Exit the terminal with `Ctrl-C` or close the tab/window when done
 
 **Run Picker Format**: `[icon] branch-name (#run-id)`
 
