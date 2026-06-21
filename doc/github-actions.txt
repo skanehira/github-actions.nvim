@@ -262,16 +262,24 @@ history.buffer                             *github-actions-history-buffer-config
     buffer.history~
         Configuration for workflow run history buffers:
         - open_mode: How to open the buffer (default: 'tab')
-          Valid values: 'tab', 'vsplit', 'split', 'current'
+          Valid values: 'tab', 'vsplit', 'split', 'current', 'float'
+
         - buflisted: Whether buffer appears in buffer list (default: true)
         - window_options: Window-local options to set (default: {wrap = true})
 
     buffer.logs~
         Configuration for logs buffers:
         - open_mode: How to open the buffer (default: 'vsplit')
-          Valid values: 'tab', 'vsplit', 'split', 'current'
+          Valid values: 'tab', 'vsplit', 'split', 'current', 'float'
+
         - buflisted: Whether buffer appears in buffer list (default: true)
         - window_options: Window-local options to set (default: {wrap = false})
+    buffer.watch~
+        Configuration for watch buffers:
+        - open_mode: How to open the buffer (default: 'tab'
+          Valid values: 'tab', 'vsplit', 'split', 'current', 'float'
+        - window_options: Window-local options to set (default: {wrap = false})
+        - window_geometry_options: Float window options, height (default 80% window), width (default 80% window), row (default maximun that fits in height), col (default maximun that fits in width), title (default 'Watch | file.yml')
 
     Example:~
 >lua
@@ -291,6 +299,20 @@ history.buffer                             *github-actions-history-buffer-config
                 window_options = {
                   wrap = false,
                 },
+              },
+              watch = {
+                open_mode = 'tab',
+                open_mode_history = 'float',
+                window_options = {
+                  wrap = false,
+                },
+                window_geometry_options = {
+                    height = nil,
+                    width = nil,
+                    row = nil,
+                    column = nil,
+                    title = nil,
+                  },
               },
             },
           },
@@ -319,12 +341,13 @@ history.buffer                             *github-actions-history-buffer-config
 
     Arguments:~
         [open_mode]  Optional. How to open the buffer. Valid values:
-                     'tab', 'vsplit', 'split', 'current'
+                     'tab', 'vsplit', 'split', 'current', 'float'
                      Overrides history.buffer.history.open_mode config.
 
     Example:~
         :GithubActionsHistory split    " Open in horizontal split
         :GithubActionsHistory vsplit   " Open in vertical split
+        :GithubActionsHistory float    " Open in float window
 
     When using telescope.nvim, you can select multiple workflow files using
     <Tab>. Each selected workflow will open in a separate buffer using the
@@ -342,12 +365,13 @@ history.buffer                             *github-actions-history-buffer-config
 
     Arguments:~
         [open_mode]  Optional. How to open the buffer. Valid values:
-                     'tab', 'vsplit', 'split', 'current'
+                     'tab', 'vsplit', 'split', 'current', 'float'
                      Overrides history.buffer.history.open_mode config.
 
     Example:~
         :GithubActionsHistoryByPR tab    " Open in new tab
         :GithubActionsHistoryByPR split  " Open in horizontal split
+        :GithubActionsHistoryByPR float    " Open in float window
 
     This command opens a branch/PR picker that:
     1. Shows all remote branches with associated PR numbers
