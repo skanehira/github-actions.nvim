@@ -121,10 +121,8 @@ function M.open_float_window(bufnr, window_opts, float_opts)
   end
 
   local winid = vim.api.nvim_open_win(bufnr, true, win_config)
-  for key, value in pairs(opts) do
-    pcall(function()
-      vim.wo[winid][key] = value
-    end)
+  for key, value in pairs(window_opts) do
+    vim.wo[winid][key] = value
   end
 
   return winid
