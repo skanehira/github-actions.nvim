@@ -134,7 +134,7 @@ require('github-actions').setup({
       },
       watch = {
         open_mode = 'tab',    -- How to open watch buffer: 'tab', 'vsplit', 'split', 'current', or 'float' (default: 'tab')
-        open_mode_history = 'float',    -- How to open watch buffer from the history buffer: 'tab', 'vsplit', 'split', 'current', or 'float' (default: 'tab')
+        open_mode_history = 'float',    -- How to open watch buffer from the history buffer: 'tab', 'vsplit', 'split', 'current', or 'float' (default: 'vsplit')
         window_options = {},  -- Float window options: width, height, row, col (default: 80% centered)
       },
       logs = {
