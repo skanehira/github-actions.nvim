@@ -1,6 +1,6 @@
 ---@class TerminalOpenOptions
----@field window_options? (FloatWindowOptions|table<string, any>) Float geometry or window-local options
----@field title? string Window title (float mode only)
+---@field window_options? table<string, any> Float geometry or window-local options
+---@field window_geometry_options? FloatWindowOptions Window title (float mode only)
 ---@field on_exit? fun() Callback invoked (via vim.schedule) when terminal exits
 
 ---Closes a terminal window and its buffer
@@ -91,26 +91,30 @@ end
 
 ---Open a floating window with consistent defaults
 ---@param bufnr number Buffer number to display
----@param opts? table Options: width, height, row, col, title (default: 80% of editor, centered)
+---@param window_opts? table Options: wrap
+---@param float_opts? table Options: width, height, row, col, title (default: 80% of editor, centered)
 ---@return number winid Window ID
-function M.open_float_window(bufnr, opts)
-  opts = opts or {}
+function M.open_float_window(bufnr, window_opts, float_opts)
+  window_opts = window_opts or {}
+  float_opts = float_opts or {}
+
   local columns = (vim.o.columns and vim.o.columns > 0) and vim.o.columns or 80
   local lines = (vim.o.lines and vim.o.lines > 0) and vim.o.lines or 24
-  local width = opts.width or math.floor(columns * 0.8)
-  local height = opts.height or math.floor(lines * 0.8)
+  local width = float_opts.width or math.floor(columns * 0.8)
+  local height = float_opts.height or math.floor(lines * 0.8)
 
   local win_config = {
-    relative = 'editor',
     width = width,
     height = height,
-    row = opts.row or math.floor((lines - height) / 2),
-    col = opts.col or math.floor((columns - width) / 2),
+    row = float_opts.row or math.floor((lines - height) / 2),
+    col = float_opts.col or math.floor((columns - width) / 2),
+    title = float_opts.title,
+    relative = 'editor',
     style = 'minimal',
     border = 'rounded',
   }
-  if opts.title then
-    win_config.title = opts.title
+
+  if float_opts.title then
     if vim.fn.has('nvim-0.10') == 1 then
       win_config.title_pos = 'center'
     end
@@ -122,6 +126,7 @@ function M.open_float_window(bufnr, opts)
       vim.wo[winid][key] = value
     end)
   end
+
   return winid
 end
 
@@ -142,7 +147,7 @@ function M.open_terminal(mode, cmd, opts)
   elseif mode == 'float' then
     return M.open_terminal_float(cmd, {
       window_options = opts.window_options,
-      title = opts.title,
+      window_geometry_options = opts.window_geometry_options,
       on_exit = opts.on_exit,
     })
   end
@@ -182,9 +187,9 @@ end
 function M.open_terminal_float(cmd, opts)
   opts = opts or {}
   local bufnr = vim.api.nvim_create_buf(false, true)
-  local title = opts.title
-  local float_opts = vim.tbl_extend('keep', opts.window_options or {}, { title = title })
-  local winid = M.open_float_window(bufnr, float_opts)
+  local window_opts = opts.window_options or {}
+  local float_opts = opts.window_geometry_options or {}
+  local winid = M.open_float_window(bufnr, window_opts, float_opts)
 
   local ok = vim.fn.jobstart(cmd, { term = true })
   if ok <= 0 then

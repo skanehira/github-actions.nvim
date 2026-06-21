@@ -20,6 +20,7 @@ local buffer_data = {}
 ---Open a new window according to the specified mode
 ---@param mode string One of: "tab", "vsplit", "split", "current", "float"
 ---@param bufnr? number Buffer number to set in the window (required for float mode)
+---@param opts? TerminalOpenOptions
 function M.open_window(mode, bufnr, opts)
   opts = opts or {}
   if mode == 'tab' then
@@ -30,7 +31,7 @@ function M.open_window(mode, bufnr, opts)
     vim.cmd('split')
   elseif mode == 'float' then
     assert(bufnr, 'bufnr is required for float mode')
-    return buffer_utils.open_float_window(bufnr, opts)
+    return buffer_utils.open_float_window(bufnr, opts.window_options or {}, opts.window_geometry_options or {})
   elseif mode ~= 'current' then
     vim.cmd('tabnew')
   end

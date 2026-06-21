@@ -398,7 +398,8 @@ describe('watch.init', function()
 
       watch.watch_workflow({
         open_mode = 'float',
-        window_options = {
+        window_options = {},
+        window_geometry_options = {
           width = 60,
           height = 30,
           row = 5,

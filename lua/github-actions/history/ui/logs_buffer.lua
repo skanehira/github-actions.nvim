@@ -44,9 +44,7 @@ local function focus_or_create_window(bufnr, opts)
   elseif open_mode == 'split' then
     vim.cmd('split')
   elseif open_mode == 'float' then
-    local title = opts.title or ''
-    local float_opts = vim.tbl_extend('keep', opts.window_options or {}, { title = title })
-    winnr = buffer_utils.open_float_window(bufnr, float_opts)
+    winnr = buffer_utils.open_float_window(bufnr, opts.window_options or {}, opts.window_geometry_options or {})
   elseif open_mode ~= 'current' then
     vim.cmd('vsplit')
   end
@@ -126,6 +124,7 @@ function M.create_buffer(title, run_id, opts)
   local buflisted = opts.buflisted ~= nil and opts.buflisted or logs_buffer_config.buflisted
   local open_mode = opts.open_mode or logs_buffer_config.open_mode
   local window_options = opts.window_options or logs_buffer_config.window_options
+  local window_geometry_options = opts.window_geometry_options or {}
   local custom_keymaps = (opts.keymaps or {}).logs
 
   local bufname = get_buffer_name(title, run_id)
@@ -133,6 +132,8 @@ function M.create_buffer(title, run_id, opts)
   local bufnr = -1
   local winnr = -1
   local exists_bufnr = false
+
+  window_geometry_options.title = built_title
 
   -- Check if buffer already exists
   local existing_bufnr = buffer_utils.find_buffer_by_name(bufname)
@@ -155,14 +156,6 @@ function M.create_buffer(title, run_id, opts)
     end
   end
 
-  -- Buffer exists, focus on it or create window for it
-  winnr = focus_or_create_window(bufnr, {
-    logs_fold_by_default = opts.logs_fold_by_default,
-    open_mode = open_mode,
-    window_options = window_options,
-    title = built_title,
-  })
-
   -- Set buffer options
   vim.bo[bufnr].buftype = 'nofile'
   vim.bo[bufnr].swapfile = false
@@ -175,7 +168,7 @@ function M.create_buffer(title, run_id, opts)
     logs_fold_by_default = opts.logs_fold_by_default,
     open_mode = open_mode,
     window_options = window_options,
-    title = built_title,
+      window_geometry_options = window_geometry_options,
   })
 
   -- Get keymaps from config (use custom if provided, otherwise defaults)

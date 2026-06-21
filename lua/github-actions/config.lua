@@ -61,16 +61,18 @@
 ---@field height? number Float window height (default: 80% of editor)
 ---@field row? number Float window row position (default: centered)
 ---@field col? number Float window column position (default: centered)
+---@field title? string The title of the float window (default: Watch | file.yml)
 
 ---@class BufferOpenOptions
 ---@field open_mode? string How to open buffer: "tab", "vsplit", "split", "current", or "float"
 ---@field buflisted? boolean Whether buffer should be listed in buffer list (default: true)
----@field window_options? (FloatWindowOptions|table<string, any>) Float geometry or window-local options (e.g., {wrap = false, number = true})
+---@field window_options? (table<string, any>) Float geometry or window-local options (e.g., {wrap = false, number = true})
 
 ---@class WatchBufferOptions
 ---@field open_mode? string How to open buffer: "tab", "vsplit", "split", "current", or "float"
 ---@field open_mode_history? string How to open buffer: "tab", "vsplit", "split", "current", or "float" from the history buffer
----@field window_options? (FloatWindowOptions|table<string, any>) Float geometry or window-local options (e.g., {wrap = false, number = true})
+---@field window_options? (table<string, any>) Float geometry or window-local options (e.g., {wrap = false, number = true})
+---@field window_geometry_options? (FloatWindowOptions) Float geometry or window-local options (e.g., {height = 80, width = 120, title = 'Monitoring!'})
 
 ---@class HistoryBufferOptions
 ---@field history? BufferOpenOptions History buffer options (default: open_mode="tab", window_options={wrap=true})
@@ -85,6 +87,13 @@
 ---@field logs_fold_by_default? boolean Whether to fold log groups by default (default: true)
 ---@filed pr_mode? boolean Whether to show the pr history intead
 ---@field buffer? HistoryBufferOptions Buffer display options
+
+---@class WatchOptions
+---@field icons? HistoryIcons Icon configuration (reuses config.history.icons)
+---@field highlights? HistoryHighlights Highlight configuration (reuses config.history.highlights)
+---@field open_mode? string How to open watch terminal: "tab", "vsplit", "split", "current", "float"
+---@field window_options? table<string, any> Window options for float mode (width, height, row, col)
+---@field window_geometry_options? FloatWindowOptions Window geometry options for float windows, define size, content sixze and title.
 
 ---@class GithubActionsConfig
 ---@field actions? VirtualTextOptions Display options for GitHub Actions version checking
@@ -172,6 +181,7 @@ local defaults = {
         open_mode = 'tab',
         open_mode_history = 'vsplit',
         window_options = {},
+        window_geometry_options = {},
       },
     },
   },

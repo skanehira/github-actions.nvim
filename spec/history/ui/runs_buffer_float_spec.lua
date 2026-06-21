@@ -47,10 +47,12 @@ describe('history.ui.runs_buffer - float mode', function()
 
       local test_bufnr = vim.api.nvim_create_buf(false, true)
       runs_buffer.open_window('float', test_bufnr, {
-        width = 50,
-        height = 20,
-        row = 10,
-        col = 10,
+        window_geometry_options = {
+          width = 50,
+          height = 20,
+          row = 10,
+          col = 10,
+        },
       })
 
       assert.is_not_nil(captured_opts)
@@ -76,7 +78,7 @@ describe('history.ui.runs_buffer - float mode', function()
       end)
 
       local test_bufnr = vim.api.nvim_create_buf(false, true)
-      runs_buffer.open_window('float', test_bufnr, { title = 'test title' })
+      runs_buffer.open_window('float', test_bufnr, { window_geometry_options = { title = 'test title' } })
 
       assert.is_not_nil(captured_opts)
       assert.equals('test title', captured_opts.title)

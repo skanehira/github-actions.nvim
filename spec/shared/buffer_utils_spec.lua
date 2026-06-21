@@ -133,7 +133,7 @@ describe('shared.buffer_utils', function()
       end)
 
       local bufnr = vim.api.nvim_create_buf(false, true)
-      buffer_utils.open_float_window(bufnr, { title = 'test title' })
+      buffer_utils.open_float_window(bufnr, {}, { title = 'test title' })
 
       assert.is_not_nil(captured_opts)
       assert.equals('test title', captured_opts.title)
@@ -147,8 +147,9 @@ describe('shared.buffer_utils', function()
       end)
 
       local bufnr = vim.api.nvim_create_buf(false, true)
-      buffer_utils.open_float_window(bufnr, {})
+      buffer_utils.open_float_window(bufnr, {}, {})
 
+      assert.is_not_nil(captured_opts)
       assert.is_nil(captured_opts.title)
     end)
   end)
@@ -172,7 +173,7 @@ describe('shared.buffer_utils', function()
 
       local bufnr, winid = buffer_utils.open_terminal_float(
         { 'gh', 'run', 'watch', '12345' },
-        { title = 'Watch - ci.yml' }
+        { window_geometry_options = { title = 'Watch - ci.yml' } }
       )
 
       assert.is_not_nil(bufnr)
@@ -191,6 +192,7 @@ describe('shared.buffer_utils', function()
 
       local on_exit_called = false
       local bufnr, _ = buffer_utils.open_terminal_float({ 'gh', 'run', 'watch', '12345' }, {
+        window_geometry_options = { title = 'Watch - ci.yml' },
         on_exit = function()
           on_exit_called = true
         end,

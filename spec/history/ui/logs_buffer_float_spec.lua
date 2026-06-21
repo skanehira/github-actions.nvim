@@ -101,9 +101,11 @@ describe('history.ui.logs_buffer - float mode', function()
 
       local bufnr, winnr = logs_buffer.create_buffer('build / Run tests', 12345, {
         open_mode = 'float',
-        window_options = {
+        window_geometry_options = {
           width = 90,
           height = 40,
+        },
+        window_options = {
           wrap = false,
         },
       })

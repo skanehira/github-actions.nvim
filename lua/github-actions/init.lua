@@ -61,6 +61,7 @@ function M.watch_workflow(watch_opts)
     highlights = history_opts and history_opts.highlights,
     open_mode = merged.open_mode,
     window_options = merged.window_options,
+    window_geometry_options = merged.window_geometry_options,
   }
   watch.watch_workflow(opts)
 end
