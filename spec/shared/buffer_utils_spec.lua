@@ -167,6 +167,7 @@ describe('shared.buffer_utils', function()
         assert.equals('run', cmd[2])
         assert.equals('watch', cmd[3])
         assert.equals('12345', cmd[4])
+        return 1
       end)
 
       local bufnr, winid = buffer_utils.open_terminal_float(
@@ -184,7 +185,9 @@ describe('shared.buffer_utils', function()
       setup_mock(vim.api, 'nvim_open_win', function(_, _, _)
         return 1001
       end)
-      setup_mock(vim.fn, 'jobstart', function() end)
+      setup_mock(vim.fn, 'jobstart', function()
+        return 1
+      end)
 
       local on_exit_called = false
       local bufnr, _ = buffer_utils.open_terminal_float({ 'gh', 'run', 'watch', '12345' }, {
@@ -202,7 +205,9 @@ describe('shared.buffer_utils', function()
     end)
 
     it('should close buffer and window when pressing q', function()
-      setup_mock(vim.fn, 'jobstart', function() end)
+      setup_mock(vim.fn, 'jobstart', function()
+        return 1
+      end)
 
       local bufnr, winid = buffer_utils.open_terminal_float({ 'echo', 'test' })
 

@@ -130,42 +130,38 @@ function M.create_buffer(title, run_id, opts)
 
   local bufname = get_buffer_name(title, run_id)
   local built_title = 'Logs - ' .. title
+  local bufnr = -1
+  local winnr = -1
+  local exists_bufnr = false
 
   -- Check if buffer already exists
   local existing_bufnr = buffer_utils.find_buffer_by_name(bufname)
   if existing_bufnr then
-    -- Buffer exists, focus on it or create window for it
-    local winnr = focus_or_create_window(existing_bufnr, {
-      logs_fold_by_default = opts.logs_fold_by_default,
-      open_mode = open_mode,
-      window_options = window_options,
-      title = built_title,
-    })
-    return existing_bufnr, winnr, true
-  end
+    bufnr = existing_bufnr or -1
+    exists_bufnr = true
+  else
+    -- Create new buffer (listed by default to avoid [No Name] buffers)
+    local new_buffer_nr = vim.api.nvim_create_buf(buflisted, true)
 
-  -- Create new buffer (listed by default to avoid [No Name] buffers)
-  local bufnr = vim.api.nvim_create_buf(buflisted, true)
+    -- Try to set buffer name, handle collision error
+    vim.api.nvim_buf_set_name(new_buffer_nr, bufname)
+    bufnr = buffer_utils.find_buffer_by_name(bufname) or -1
 
-  -- Try to set buffer name, handle collision error
-  local success, err = pcall(vim.api.nvim_buf_set_name, bufnr, bufname)
-  if not success then
-    -- Buffer name already exists, delete the new buffer and find the existing one
-    vim.api.nvim_buf_delete(bufnr, { force = true })
-    existing_bufnr = buffer_utils.find_buffer_by_name(bufname)
-    if existing_bufnr then
-      local winnr = focus_or_create_window(existing_bufnr, {
-        logs_fold_by_default = opts.logs_fold_by_default,
-        open_mode = open_mode,
-        window_options = window_options,
-        title = built_title,
-      })
-      return existing_bufnr, winnr, true
-    else
+    if not bufnr then
       -- This shouldn't happen, but handle it gracefully
       error(string.format('Failed to create or find buffer: %s', err))
+
+      return -1, -1, false
     end
   end
+
+  -- Buffer exists, focus on it or create window for it
+  winnr = focus_or_create_window(bufnr, {
+    logs_fold_by_default = opts.logs_fold_by_default,
+    open_mode = open_mode,
+    window_options = window_options,
+    title = built_title,
+  })
 
   -- Set buffer options
   vim.bo[bufnr].buftype = 'nofile'
@@ -175,7 +171,7 @@ function M.create_buffer(title, run_id, opts)
   vim.bo[bufnr].modifiable = false
 
   -- Create window and set up folding
-  local winnr = focus_or_create_window(bufnr, {
+  winnr = focus_or_create_window(bufnr, {
     logs_fold_by_default = opts.logs_fold_by_default,
     open_mode = open_mode,
     window_options = window_options,
@@ -202,7 +198,7 @@ function M.create_buffer(title, run_id, opts)
     end,
   })
 
-  return bufnr, winnr, false
+  return bufnr, winnr, exists_bufnr
 end
 
 ---Setup buffer keymaps
