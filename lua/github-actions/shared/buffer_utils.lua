@@ -154,7 +154,7 @@ function M.open_terminal(mode, cmd, opts)
   vim.api.nvim_win_set_buf(winid, bufnr)
 
   local ok = vim.fn.jobstart(cmd, { term = true })
-  if ok == -1 then
+  if ok <= 0 then
     vim.notify('[GitHub Actions] Failed to start terminal', vim.log.levels.ERROR)
   end
 
@@ -187,7 +187,7 @@ function M.open_terminal_float(cmd, opts)
   local winid = M.open_float_window(bufnr, float_opts)
 
   local ok = vim.fn.jobstart(cmd, { term = true })
-  if ok == -1 then
+  if ok <= 0 then
     vim.notify('[GitHub Actions] Failed to start terminal', vim.log.levels.ERROR)
   end
 
