@@ -168,7 +168,7 @@ function M.create_buffer(title, run_id, opts)
     logs_fold_by_default = opts.logs_fold_by_default,
     open_mode = open_mode,
     window_options = window_options,
-      window_geometry_options = window_geometry_options,
+    window_geometry_options = window_geometry_options,
   })
 
   -- Get keymaps from config (use custom if provided, otherwise defaults)
