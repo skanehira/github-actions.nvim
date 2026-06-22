@@ -116,20 +116,18 @@ function M.create_buffer(title, run_id, opts)
   local defaults = config_module.get_defaults()
   local logs_buffer_config = vim.tbl_get(defaults, 'history', 'buffer', 'logs') or {}
 
-  -- Extract buffer options with defaults
-  local buflisted = opts.buflisted ~= nil and opts.buflisted or logs_buffer_config.buflisted
-  local open_mode = opts.open_mode or logs_buffer_config.open_mode
-  local window_options = opts.window_options or logs_buffer_config.window_options
-  local window_geometry_options = opts.window_geometry_options or {}
-  local custom_keymaps = (opts.keymaps or {}).logs
-
   local bufname = get_buffer_name(title, run_id)
   local built_title = 'Logs - ' .. title
   local bufnr = -1
   local winnr = -1
   local exists_bufnr = false
 
-  window_geometry_options.title = built_title
+  -- Extract buffer options with defaults
+  local buflisted = opts.buflisted ~= nil and opts.buflisted or logs_buffer_config.buflisted
+  local open_mode = opts.open_mode or logs_buffer_config.open_mode
+  local window_options = opts.window_options or logs_buffer_config.window_options
+  local geometry_options = vim.tbl_extend('keep', window_geometry_options or {}, { title = built_title })
+  local custom_keymaps = (opts.keymaps or {}).logs
 
   -- Check if buffer already exists
   local existing_bufnr = buffer_utils.find_buffer_by_name(bufname)
@@ -164,7 +162,7 @@ function M.create_buffer(title, run_id, opts)
     logs_fold_by_default = opts.logs_fold_by_default,
     open_mode = open_mode,
     window_options = window_options,
-    window_geometry_options = window_geometry_options,
+    window_geometry_options = geometry_options,
   })
 
   -- Get keymaps from config (use custom if provided, otherwise defaults)
