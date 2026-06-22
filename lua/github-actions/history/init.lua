@@ -23,9 +23,9 @@ local function show_history_for_file(workflow_filepath, custom_icons, custom_hig
     window_options = hist_buffer_cfg.window_options,
     watch_open_mode = watch_cfg.open_mode_history,
     watch_window_options = watch_cfg.window_options,
-    watch_window_geomerty_options = vim.tbl_extend(
+    watch_window_geometry_options = vim.tbl_extend(
       'keep',
-      watch_cfg.window_geomerty_options,
+      watch_cfg.window_geometry_options or {},
       { title = 'History - ' .. workflow_file }
     ),
   }

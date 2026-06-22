@@ -1,4 +1,5 @@
 local buffer_utils = require('github-actions.shared.buffer_utils')
+local window_utils = require('github-actions.shared.window_utils')
 
 ---@class LogsBuffer
 local M = {}
@@ -65,7 +66,7 @@ local function focus_or_create_window(bufnr, opts)
 
   -- Apply window options
   if opts.window_options then
-    window_utils.set_window_options(winid, opt.window_options)
+    window_utils.set_window_options(winnr, opts.window_options)
   end
 
   return winnr
@@ -126,7 +127,7 @@ function M.create_buffer(title, run_id, opts)
   local buflisted = opts.buflisted ~= nil and opts.buflisted or logs_buffer_config.buflisted
   local open_mode = opts.open_mode or logs_buffer_config.open_mode
   local window_options = opts.window_options or logs_buffer_config.window_options
-  local geometry_options = vim.tbl_extend('keep', window_geometry_options or {}, { title = built_title })
+  local geometry_options = vim.tbl_extend('keep', opts.window_geometry_options or {}, { title = built_title })
   local custom_keymaps = (opts.keymaps or {}).logs
 
   -- Check if buffer already exists

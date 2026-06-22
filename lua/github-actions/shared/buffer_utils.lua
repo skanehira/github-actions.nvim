@@ -24,6 +24,8 @@ local function close_terminal_buffer_job(winid, bufnr)
   end
 end
 
+local window_utils = require('github-actions.shared.window_utils')
+
 ---@class BufferUtils
 local M = {}
 
@@ -121,7 +123,7 @@ function M.open_float_window(bufnr, window_opts, float_opts)
   end
 
   local winid = vim.api.nvim_open_win(bufnr, true, win_config)
-  window_utils.set_window_options(winid, opts)
+  window_utils.set_window_options(winid, window_opts)
 
   return winid
 end
