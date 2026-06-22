@@ -110,9 +110,7 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
 
   -- Apply window options to window (only for non-floating windows)
   if window_options and open_mode ~= 'float' then
-    for option, value in pairs(window_options) do
-      vim.wo[winnr][option] = value
-    end
+    window_utils.set_window_options(winid, window_options)
   end
 
   -- Get keymaps from config (use custom if provided, otherwise defaults)
@@ -134,6 +132,7 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
     window_options = window_options,
     watch_open_mode = watch_open_mode,
     watch_window_options = opts.watch_window_options or watch_buffer_config.window_options,
+    watch_geometry_options = opts.watch_geometry_options or watch_buffer_config.watch_geomtery_options,
   }
 
   -- Set up keymaps
@@ -309,7 +308,7 @@ local function watch_run(bufnr)
 
   buffer_utils.open_terminal(mode, { 'gh', 'run', 'watch', tostring(run.databaseId) }, {
     window_options = data.watch_window_options,
-    title = title,
+    window_geometry_options = data.watch_window_geomerty_options,
     on_exit = function()
       if vim.api.nvim_buf_is_valid(bufnr) then
         refresh_history(bufnr)

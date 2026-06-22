@@ -65,11 +65,7 @@ local function focus_or_create_window(bufnr, opts)
 
   -- Apply window options
   if opts.window_options then
-    for option, value in pairs(opts.window_options) do
-      pcall(function()
-        vim.wo[option] = value
-      end)
-    end
+    window_utils.set_window_options(winid, opt.window_options)
   end
 
   return winnr
