@@ -138,15 +138,12 @@ function M.create_buffer(title, run_id, opts)
     -- Create new buffer (listed by default to avoid [No Name] buffers)
     local new_buffer_nr = vim.api.nvim_create_buf(buflisted, true)
 
-    -- Try to set buffer name, handle collision error
-    vim.api.nvim_buf_set_name(new_buffer_nr, bufname)
-    bufnr = buffer_utils.find_buffer_by_name(bufname) or -1
-
-    if not bufnr then
-      -- This shouldn't happen, but handle it gracefully
-      error(string.format('Failed to create or find buffer: %s', err))
-
-      return -1, -1, false
+    -- Try to set buffer name, handle collision by falling back to the buffer
+    local ok = pcall(vim.api.nvim_buf_set_name, new_buffer_nr, bufname)
+    if ok then
+      bufnr = new_buffer_nr
+    else
+      bufnr = buffer_utils.find_buffer_by_name(bufname) or new_buffer_nr
     end
   end
 
