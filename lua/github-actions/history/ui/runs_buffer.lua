@@ -17,6 +17,11 @@ local M = {}
 -- bufnr -> { runs = {...}, custom_icons = {...}, custom_highlights = {...} }
 local buffer_data = {}
 
+-- Float history forces watch into float (split-from-float is unsupported); otherwise honor user / default.
+local function resolve_watch_open_mode(open_mode, opts, watch_buffer_config)
+  return (open_mode == 'float' and 'float') or opts.watch_open_mode or watch_buffer_config.open_mode_history or 'vsplit'
+end
+
 ---Open a new window according to the specified mode
 ---@param mode string One of: "tab", "vsplit", "split", "current", "float"
 ---@param bufnr? number Buffer number to set in the window (required for float mode)
@@ -71,10 +76,7 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
       local data = buffer_data[existing_bufnr]
       data.open_mode = open_mode
       data.window_options = window_options
-      data.watch_open_mode = (open_mode == 'float' and 'float')
-        or opts.watch_open_mode
-        or watch_buffer_config.open_mode_history
-        or 'vsplit'
+      data.watch_open_mode = resolve_watch_open_mode(open_mode, opts, watch_buffer_config)
       data.watch_window_options = opts.watch_window_options or watch_buffer_config.window_options
       data.watch_window_geometry_options = opts.watch_window_geometry_options
         or watch_buffer_config.window_geometry_options
@@ -138,11 +140,7 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
   local default_list_keymaps = assert(defaults.history.keymaps.list, 'default list keymaps must exist')
   local keymaps = vim.tbl_deep_extend('force', default_list_keymaps, custom_keymaps or {})
 
-  -- Float windows does not support vsplit mode, so if history is float watch must open in float regardless the configuration
-  local watch_open_mode = (open_mode == 'float' and 'float')
-    or opts.watch_open_mode
-    or watch_buffer_config.open_mode_history
-    or 'vsplit'
+  local watch_open_mode = resolve_watch_open_mode(open_mode, opts, watch_buffer_config)
 
   buffer_data[bufnr] = {
     workflow_file = workflow_file,
