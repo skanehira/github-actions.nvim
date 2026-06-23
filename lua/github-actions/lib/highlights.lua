@@ -73,8 +73,13 @@ local function merge_history_highlights(custom_opts)
 
   for option_key, hl_group in pairs(mapping) do
     if custom_opts[option_key] then
-      -- Merge custom options with default, preserving default=true
-      highlights[hl_group] = vim.tbl_extend('force', highlights[hl_group], custom_opts[option_key])
+      -- Merge custom options with default. Strip `default=true` so the user's
+      -- explicit choice wins over any colorscheme defining the same group;
+      -- without this, `nvim_set_hl` defers to the colorscheme and silently
+      -- ignores the user customisation.
+      local merged = vim.tbl_extend('force', highlights[hl_group], custom_opts[option_key])
+      merged.default = nil
+      highlights[hl_group] = merged
     end
   end
 
