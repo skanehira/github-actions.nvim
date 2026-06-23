@@ -146,6 +146,54 @@ describe('pr.init', function()
       select_mod.select:revert()
     end)
 
+    it('should propagate watch_window_geometry_options with branch title to create_buffer', function()
+      stub(pr_api, 'get_current_branch')
+      pr_api.get_current_branch.returns('feature/branch')
+
+      stub(pr_api, 'fetch_branches_with_prs')
+      pr_api.fetch_branches_with_prs.invokes(function(callback)
+        callback({ { branch = 'feature/branch', pr_number = 1 } }, nil)
+      end)
+
+      local runs_buffer = require('github-actions.history.ui.runs_buffer')
+      local captured_create_opts = nil
+      stub(runs_buffer, 'create_buffer')
+      runs_buffer.create_buffer.invokes(function(_, _, opts)
+        captured_create_opts = opts
+        return 1, 1
+      end)
+      stub(runs_buffer, 'show_loading')
+      stub(history_api, 'fetch_runs_by_branch')
+
+      stub(select_mod, 'select')
+      select_mod.select.invokes(function(opts)
+        opts.on_select('feature/branch')
+      end)
+
+      pr_init.show_pr_history({
+        buffer = {
+          watch = {
+            window_geometry_options = { width = 100, height = 30 },
+          },
+        },
+      })
+
+      flush_scheduled()
+
+      assert.is_not_nil(captured_create_opts)
+      assert.same(
+        { width = 100, height = 30, title = 'History - feature/branch' },
+        captured_create_opts.watch_window_geometry_options
+      )
+
+      pr_api.get_current_branch:revert()
+      pr_api.fetch_branches_with_prs:revert()
+      runs_buffer.create_buffer:revert()
+      runs_buffer.show_loading:revert()
+      history_api.fetch_runs_by_branch:revert()
+      select_mod.select:revert()
+    end)
+
     it('should show warning when no branches found', function()
       stub(pr_api, 'get_current_branch')
       pr_api.get_current_branch.returns('main')
