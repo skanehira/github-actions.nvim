@@ -59,6 +59,23 @@ describe('watch.filter', function()
       assert.equals('queued', result[1].status)
     end)
 
+    it('should include waiting, pending, and requested as active statuses', function()
+      local runs = {
+        { databaseId = 1, status = 'waiting', headBranch = 'a', displayTitle = 'A', createdAt = '2025-11-14T10:00:00Z' },
+        { databaseId = 2, status = 'pending', headBranch = 'b', displayTitle = 'B', createdAt = '2025-11-14T11:00:00Z' },
+        { databaseId = 3, status = 'requested', headBranch = 'c', displayTitle = 'C', createdAt = '2025-11-14T12:00:00Z' },
+        { databaseId = 4, status = 'completed', headBranch = 'd', displayTitle = 'D', createdAt = '2025-11-14T13:00:00Z' },
+      }
+
+      local result = filter.filter_running_runs(runs)
+
+      assert.equals(3, #result)
+      -- sorted newest first
+      assert.equals(3, result[1].databaseId)
+      assert.equals(2, result[2].databaseId)
+      assert.equals(1, result[3].databaseId)
+    end)
+
     it('should include both in_progress and queued runs', function()
       local runs = {
         {
