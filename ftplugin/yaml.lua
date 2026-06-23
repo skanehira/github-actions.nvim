@@ -29,9 +29,44 @@ vim.defer_fn(function()
   end
 end, 10)
 
--- Auto-check on text changes (debounced for performance)
+-- Auto-check on text changes (debounced to coalesce rapid edits into a single check)
+local DEBOUNCE_MS = 500
+local debounce_timer = nil
+
 vim.api.nvim_create_autocmd({ 'TextChanged', 'TextChangedI' }, {
   buffer = bufnr,
-  callback = github_actions.check_versions,
+  callback = function()
+    if debounce_timer then
+      debounce_timer:stop()
+      debounce_timer:close()
+      debounce_timer = nil
+    end
+    -- Capture our own timer in a local so the scheduled callback can identify
+    -- itself: between `defer_fn` firing and the callback actually running, a
+    -- new TextChanged may have stopped this timer and stored a NEW one in
+    -- `debounce_timer`. Nulling the shared variable unconditionally would
+    -- orphan the new timer and leak a spurious check_versions invocation.
+    local self_timer
+    self_timer = vim.defer_fn(function()
+      if debounce_timer == self_timer then
+        debounce_timer = nil
+      end
+      if vim.api.nvim_buf_is_valid(bufnr) and vim.api.nvim_get_current_buf() == bufnr then
+        github_actions.check_versions()
+      end
+    end, DEBOUNCE_MS)
+    debounce_timer = self_timer
+  end,
   desc = 'Check GitHub Actions versions on text change (debounced)',
+})
+
+vim.api.nvim_create_autocmd('BufWipeout', {
+  buffer = bufnr,
+  callback = function()
+    if debounce_timer then
+      debounce_timer:stop()
+      debounce_timer:close()
+      debounce_timer = nil
+    end
+  end,
 })
