@@ -237,4 +237,36 @@ describe('shared.buffer_utils', function()
       assert.is_true(closed, 'buffer should be closed after q')
     end)
   end)
+
+  describe('open_terminal (non-float modes)', function()
+    it('should bind q to close window and buffer when opened in current mode', function()
+      setup_mock(vim.fn, 'jobstart', function()
+        return 1
+      end)
+      vim.cmd('split') -- ensure the terminal window is not the last one
+
+      local bufnr, winid = buffer_utils.open_terminal('current', { 'echo', 'test' })
+
+      assert.is_true(vim.api.nvim_buf_is_valid(bufnr), 'buffer should be initially valid')
+      assert.is_true(vim.api.nvim_win_is_valid(winid), 'window should be initially valid')
+
+      local maps = vim.api.nvim_buf_get_keymap(bufnr, 'n')
+      local q_callback = nil
+      for _, m in ipairs(maps) do
+        if m.lhs == 'q' then
+          q_callback = m.callback
+          break
+        end
+      end
+      assert.is_not_nil(q_callback, 'q keymap should exist on non-float terminal buffer')
+
+      q_callback()
+
+      assert.is_false(vim.api.nvim_win_is_valid(winid), 'window should be closed after q')
+      local closed = vim.wait(1000, function()
+        return not vim.api.nvim_buf_is_valid(bufnr)
+      end, 10)
+      assert.is_true(closed, 'buffer should be closed after q')
+    end)
+  end)
 end)

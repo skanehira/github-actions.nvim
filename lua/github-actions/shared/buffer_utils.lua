@@ -161,6 +161,10 @@ function M.open_terminal(mode, cmd, opts)
     vim.notify('[GitHub Actions] Failed to start terminal', vim.log.levels.ERROR)
   end
 
+  vim.keymap.set('n', 'q', function()
+    close_terminal_buffer_job(winid, bufnr)
+  end, { buffer = bufnr, noremap = true, silent = true })
+
   if opts.on_exit then
     vim.api.nvim_create_autocmd('TermClose', {
       buffer = bufnr,
