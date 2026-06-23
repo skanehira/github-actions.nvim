@@ -47,6 +47,19 @@ describe('history.ui.logs_buffer', function()
       end
       assert.is_true(has_q_keymap, 'Should have "q" keymap to close buffer')
     end)
+
+    it('should not accumulate BufDelete autocmds when reusing existing buffer', function()
+      -- First call: creates the buffer and registers a BufDelete autocmd
+      local bufnr_first, _ = logs_buffer.create_buffer('reuse / test', 7777)
+      local first_count = #vim.api.nvim_get_autocmds({ event = 'BufDelete', buffer = bufnr_first })
+
+      -- Second call with the same title/run_id: reuses the same buffer
+      local bufnr_second, _ = logs_buffer.create_buffer('reuse / test', 7777)
+      local second_count = #vim.api.nvim_get_autocmds({ event = 'BufDelete', buffer = bufnr_second })
+
+      assert.equals(bufnr_first, bufnr_second, 'reuse should return the same buffer')
+      assert.equals(first_count, second_count, 'BufDelete autocmd count must not grow on reuse')
+    end)
   end)
 
   describe('create_buffer with name collision fallback', function()

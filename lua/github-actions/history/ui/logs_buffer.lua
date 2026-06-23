@@ -119,9 +119,9 @@ function M.create_buffer(title, run_id, opts)
 
   local bufname = get_buffer_name(title, run_id)
   local built_title = 'Logs - ' .. title
-  local bufnr = -1
-  local winnr = -1
+  local bufnr
   local exists_bufnr = false
+  local is_new_buffer = false
 
   -- Extract buffer options with defaults
   local buflisted = opts.buflisted ~= nil and opts.buflisted or logs_buffer_config.buflisted
@@ -133,7 +133,7 @@ function M.create_buffer(title, run_id, opts)
   -- Check if buffer already exists
   local existing_bufnr = buffer_utils.find_buffer_by_name(bufname)
   if existing_bufnr then
-    bufnr = existing_bufnr or -1
+    bufnr = existing_bufnr
     exists_bufnr = true
   else
     -- Create new buffer (listed by default to avoid [No Name] buffers)
@@ -143,6 +143,7 @@ function M.create_buffer(title, run_id, opts)
     local ok = pcall(vim.api.nvim_buf_set_name, new_buffer_nr, bufname)
     if ok then
       bufnr = new_buffer_nr
+      is_new_buffer = true
     else
       -- Race: another buffer claimed the name between pre-check and set_name.
       -- Reuse it and clean up the orphan we just created.
@@ -150,8 +151,10 @@ function M.create_buffer(title, run_id, opts)
       if existing_in_fallback then
         vim.api.nvim_buf_delete(new_buffer_nr, { force = true })
         bufnr = existing_in_fallback
+        exists_bufnr = true
       else
         bufnr = new_buffer_nr
+        is_new_buffer = true
       end
     end
   end
@@ -164,7 +167,7 @@ function M.create_buffer(title, run_id, opts)
   vim.bo[bufnr].modifiable = false
 
   -- Create window and set up folding
-  winnr = focus_or_create_window(bufnr, {
+  local winnr = focus_or_create_window(bufnr, {
     logs_fold_by_default = opts.logs_fold_by_default,
     open_mode = open_mode,
     window_options = window_options,
@@ -183,13 +186,17 @@ function M.create_buffer(title, run_id, opts)
   -- Set up keymaps
   M.setup_keymaps(bufnr, keymaps)
 
-  -- Clean up buffer data when buffer is deleted
-  vim.api.nvim_create_autocmd('BufDelete', {
-    buffer = bufnr,
-    callback = function()
-      buffer_data[bufnr] = nil
-    end,
-  })
+  -- Clean up buffer data when buffer is deleted.
+  -- Only register once per buffer; reused buffers already have the autocmd attached.
+  if is_new_buffer then
+    vim.api.nvim_create_autocmd('BufDelete', {
+      buffer = bufnr,
+      once = true,
+      callback = function()
+        buffer_data[bufnr] = nil
+      end,
+    })
+  end
 
   return bufnr, winnr, exists_bufnr
 end
