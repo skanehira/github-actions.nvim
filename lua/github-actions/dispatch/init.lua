@@ -7,12 +7,17 @@ local github = require('github-actions.shared.github')
 local picker = require('github-actions.shared.picker')
 local branch_picker = require('github-actions.dispatch.branch_picker')
 
+local function notify_cancelled()
+  vim.notify('[GitHub Actions] Workflow dispatch cancelled', vim.log.levels.INFO)
+end
+
 ---Handle branch selection callback
 ---@param workflow_file string Workflow filename
 ---@param inputs table Workflow inputs configuration
 ---@param selected_branch string|nil Selected branch
 local function handle_branch_selection(workflow_file, inputs, selected_branch)
   if not selected_branch then
+    notify_cancelled()
     return
   end
 
@@ -38,6 +43,7 @@ local function handle_branch_selection(workflow_file, inputs, selected_branch)
         vim.notify(err, vim.log.levels.ERROR)
       end)
     end,
+    on_cancel = notify_cancelled,
   })
 end
 
@@ -64,6 +70,7 @@ function M.dispatch_workflow_for_file(workflow_filepath)
     on_select = function(selected_branch)
       handle_branch_selection(workflow_file, workflow_dispatch.inputs, selected_branch)
     end,
+    on_cancel = notify_cancelled,
   })
 end
 

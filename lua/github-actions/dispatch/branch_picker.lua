@@ -6,7 +6,8 @@ local M = {}
 ---Options for branch picker
 ---@class BranchPickerOptions
 ---@field prompt string Prompt text to display
----@field on_select function(selected: string) Callback with selected branch
+---@field on_select fun(selected: string) Callback with selected branch
+---@field on_cancel? fun() Callback when user cancels (Esc / C-c / etc.)
 
 ---Select branch using telescope or vim.ui.select
 ---@param opts BranchPickerOptions Picker options
@@ -31,6 +32,7 @@ function M.select_branch(opts)
     prompt = opts.prompt,
     items = items,
     on_select = opts.on_select,
+    on_cancel = opts.on_cancel,
   })
 end
 

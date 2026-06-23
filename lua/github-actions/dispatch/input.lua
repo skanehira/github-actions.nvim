@@ -46,6 +46,7 @@ end
 ---@class CollectInputsHandlers
 ---@field on_success fun(input_values: InputValue[]) Called when all inputs are collected successfully
 ---@field on_error fun(error: string) Called when input collection fails
+---@field on_cancel? fun() Called when the user cancels (Esc / :q) at any prompt
 
 ---Collect input values from user using vim.ui.input or vim.ui.select
 ---@param inputs WorkflowDispatchInput[] List of input definitions
@@ -77,6 +78,9 @@ function M.collect_inputs(inputs, handlers)
         vim.schedule(function()
           -- nil means user cancelled (ESC or :q)
           if value == nil then
+            if handlers.on_cancel then
+              handlers.on_cancel()
+            end
             return
           end
 
@@ -102,6 +106,9 @@ function M.collect_inputs(inputs, handlers)
       vim.schedule(function()
         -- nil means user cancelled (ESC or :q)
         if value == nil then
+          if handlers.on_cancel then
+            handlers.on_cancel()
+          end
           return
         end
 

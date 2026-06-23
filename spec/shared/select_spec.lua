@@ -66,6 +66,58 @@ describe('shared.select', function()
       vim.ui.select = original_select
     end)
 
+    it('should invoke on_cancel when vim.ui.select returns nil', function()
+      local items = { { value = 'a', display = 'A' } }
+
+      local original_select = vim.ui.select
+      vim.ui.select = function(_, _, on_choice)
+        on_choice(nil)
+      end
+
+      local cancel_called = false
+      local select_called = false
+
+      select_mod.select({
+        prompt = 'Select:',
+        items = items,
+        on_select = function()
+          select_called = true
+        end,
+        on_cancel = function()
+          cancel_called = true
+        end,
+      })
+
+      assert.is_false(select_called)
+      assert.is_true(cancel_called)
+
+      vim.ui.select = original_select
+    end)
+
+    it('should NOT invoke on_cancel when user picks an item', function()
+      local items = { { value = 'a', display = 'A' } }
+
+      local original_select = vim.ui.select
+      vim.ui.select = function(display_items, _, on_choice)
+        on_choice(display_items[1])
+      end
+
+      local cancel_called = false
+
+      select_mod.select({
+        prompt = 'Select:',
+        items = items,
+        on_select = function() end,
+        on_cancel = function()
+          cancel_called = true
+        end,
+      })
+
+      assert.is_false(cancel_called, 'on_cancel must not fire on successful selection')
+
+      vim.ui.select = original_select
+    end)
+
     it('should pass correct prompt to vim.ui.select', function()
       local items = {
         { value = 'test', display = 'Test' },

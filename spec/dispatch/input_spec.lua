@@ -327,6 +327,62 @@ describe('workflow.input', function()
       assert.stub(vim.ui.input).was_called(1) -- Should only call once before cancellation
     end)
 
+    it('should invoke on_cancel when user cancels vim.ui.input', function()
+      local stub = require('luassert.stub')
+      local inputs = {
+        { name = 'version', description = 'Version', required = true },
+      }
+
+      local cancel_called = false
+
+      stub(vim.ui, 'input')
+      vim.ui.input.invokes(function(_, on_confirm)
+        on_confirm(nil)
+      end)
+
+      input.collect_inputs(inputs, {
+        on_success = function(_) end,
+        on_error = function(_) end,
+        on_cancel = function()
+          cancel_called = true
+        end,
+      })
+
+      vim.wait(100, function()
+        return cancel_called
+      end)
+
+      assert.is_true(cancel_called)
+    end)
+
+    it('should invoke on_cancel when user cancels vim.ui.select', function()
+      local stub = require('luassert.stub')
+      local inputs = {
+        { name = 'env', description = 'Environment', type = 'choice', options = { 'staging', 'production' } },
+      }
+
+      local cancel_called = false
+
+      stub(vim.ui, 'select')
+      vim.ui.select.invokes(function(_, _, on_choice)
+        on_choice(nil)
+      end)
+
+      input.collect_inputs(inputs, {
+        on_success = function(_) end,
+        on_error = function(_) end,
+        on_cancel = function()
+          cancel_called = true
+        end,
+      })
+
+      vim.wait(100, function()
+        return cancel_called
+      end)
+
+      assert.is_true(cancel_called)
+    end)
+
     it('should stop collecting when user cancels vim.ui.input (optional)', function()
       local stub = require('luassert.stub')
       local inputs = {

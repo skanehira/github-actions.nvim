@@ -8,6 +8,7 @@
 ---@field prompt string Prompt text to display
 ---@field items SelectItem[] Items to select from
 ---@field on_select fun(value: any|any[]) Callback when item(s) selected
+---@field on_cancel? fun() Callback when the user cancels (Esc / C-c / q / closes the picker without selecting)
 ---@field multi_select? boolean Enable multi-select mode (default: false)
 ---@field previewer? table Telescope previewer (optional)
 ---@field default_text? string Initial text in search input (Telescope only)
@@ -67,6 +68,11 @@ function M.select(opts)
     local finders = require('telescope.finders')
     local conf = require('telescope.config').values
 
+    -- Track whether the user actually selected something. Telescope does NOT
+    -- invoke select_default on cancel (Esc/C-c/q), so we use this flag in the
+    -- close hook below to decide whether to fire opts.on_cancel.
+    local select_called = false
+
     local picker_opts = {
       prompt_title = opts.prompt,
       finder = finders.new_table({
@@ -93,6 +99,7 @@ function M.select(opts)
         telescope_actions.select_default:replace(function()
           local picker = telescope_state.get_current_picker(prompt_bufnr)
 
+          select_called = true
           telescope_actions.close(prompt_bufnr)
 
           if opts.multi_select then
@@ -118,6 +125,27 @@ function M.select(opts)
             end
           end
         end)
+
+        -- Detect cancellation via the prompt buffer's BufLeave autocmd:
+        -- it fires whether the user picked an item (after select_default
+        -- calls close) or dismissed the picker (Esc/C-c/q/:q/etc.).
+        -- `select_called` is set to true in select_default BEFORE close runs,
+        -- so by the time this autocmd handler executes, the flag is correct.
+        -- We deliberately avoid `telescope_actions.close:replace` here:
+        -- Telescope's action `replace` mutates the action object globally
+        -- (not scoped to this picker), and chaining to the original via
+        -- the captured reference is self-referential, causing infinite recursion.
+        if opts.on_cancel then
+          vim.api.nvim_create_autocmd('BufLeave', {
+            buffer = prompt_bufnr,
+            once = true,
+            callback = function()
+              if not select_called then
+                opts.on_cancel()
+              end
+            end,
+          })
+        end
         return true
       end,
     }
@@ -140,11 +168,17 @@ function M.select(opts)
       prompt = opts.prompt,
     }, function(selected)
       if not selected then
+        if opts.on_cancel then
+          opts.on_cancel()
+        end
         return
       end
 
       local item = find_item_by_display(opts.items, selected)
       if not item then
+        if opts.on_cancel then
+          opts.on_cancel()
+        end
         return
       end
 
