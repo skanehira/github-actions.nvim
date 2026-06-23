@@ -21,27 +21,50 @@ describe('pr.api', function()
   end)
 
   describe('get_current_branch', function()
+    local function stub_vim_system(result_table)
+      stub(vim, 'system')
+      vim.system.invokes(function()
+        return {
+          wait = function()
+            return result_table
+          end,
+        }
+      end)
+    end
+
     it('should return current branch name', function()
-      stub(vim.fn, 'system')
-      vim.fn.system.returns('feature/my-branch\n')
+      stub_vim_system({ code = 0, stdout = 'feature/my-branch\n', stderr = '' })
 
       local branch = api.get_current_branch()
 
       assert.equals('feature/my-branch', branch)
-      assert.stub(vim.fn.system).was_called_with('git branch --show-current')
 
-      vim.fn.system:revert()
+      vim.system:revert()
     end)
 
-    it('should return nil when not in a git repository', function()
-      stub(vim.fn, 'system')
-      vim.fn.system.returns('')
+    it('should return nil when current branch output is empty (detached HEAD)', function()
+      stub_vim_system({ code = 0, stdout = '', stderr = '' })
 
       local branch = api.get_current_branch()
 
       assert.is_nil(branch)
 
-      vim.fn.system:revert()
+      vim.system:revert()
+    end)
+
+    it('should return nil when git exits with non-zero status', function()
+      stub_vim_system({
+        code = 128,
+        stdout = 'fatal: not a git repository (or any of the parent directories): .git\n',
+        stderr = '',
+      })
+
+      local branch = api.get_current_branch()
+
+      -- Even though stdout has text, it is git's error message — must NOT be returned as branch
+      assert.is_nil(branch)
+
+      vim.system:revert()
     end)
   end)
 

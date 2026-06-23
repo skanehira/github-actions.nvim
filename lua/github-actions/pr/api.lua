@@ -13,10 +13,17 @@ local M = {}
 ---@field pr_title? string PR title (if PR exists)
 
 ---Get current branch name
----@return string|nil branch_name Current branch name or nil if not in git repo
+---@return string|nil branch_name Current branch name, or nil if not in a git repo,
+---in detached HEAD state, or when git itself fails (e.g., git not installed).
 function M.get_current_branch()
-  local result = vim.fn.system('git branch --show-current')
-  local branch = result:gsub('%s+$', '') -- Trim trailing whitespace/newline
+  -- Use vim.system synchronously so we get a proper exit code; vim.fn.system
+  -- would force us to rely on the read-only `vim.v.shell_error`, which is
+  -- untestable from busted and easy to forget at call sites.
+  local result = vim.system({ 'git', 'branch', '--show-current' }, { text = true }):wait()
+  if result.code ~= 0 then
+    return nil
+  end
+  local branch = (result.stdout or ''):gsub('%s+$', '')
   if branch == '' then
     return nil
   end
