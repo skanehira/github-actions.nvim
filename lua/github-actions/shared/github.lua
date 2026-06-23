@@ -64,7 +64,7 @@ function M.fetch_latest_tag(owner, repo, callback)
 
   local api_path = string.format('repos/%s/%s/tags', owner, repo)
 
-  vim.system({ 'gh', 'api', api_path }, {}, function(result)
+  vim.system({ 'gh', 'api', api_path }, { text = true }, function(result)
     if result.code ~= 0 then
       callback(nil, 'gh API call failed: ' .. (result.stderr or 'unknown error'))
       return
@@ -99,7 +99,7 @@ function M.fetch_latest_release(owner, repo, callback)
 
   local api_path = string.format('repos/%s/%s/releases/latest', owner, repo)
 
-  vim.system({ 'gh', 'api', api_path }, {}, function(result)
+  vim.system({ 'gh', 'api', api_path }, { text = true }, function(result)
     -- If release exists, use it
     if result.code == 0 then
       local data, parse_err = M.parse_response(result.stdout)
@@ -147,7 +147,7 @@ function M.dispatch_workflow(workflow_file, ref, inputs, callback)
     table.insert(cmd, input.name .. '=' .. input.value)
   end
 
-  vim.system(cmd, {}, function(result)
+  vim.system(cmd, { text = true }, function(result)
     if result.code ~= 0 then
       callback(false, 'gh workflow run failed: ' .. (result.stderr or 'unknown error'))
       return

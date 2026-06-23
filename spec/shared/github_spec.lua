@@ -71,6 +71,46 @@ describe('github', function()
     end)
   end)
 
+  describe('fetch_latest_release', function()
+    it('should call vim.system with text=true so stdout is a string', function()
+      local stub = require('luassert.stub')
+      local captured_opts = nil
+
+      stub(github, 'is_available')
+      github.is_available.returns(true)
+
+      stub(vim, 'system')
+      vim.system.invokes(function(_, opts, callback)
+        captured_opts = opts
+        callback({ code = 0, stdout = '{"tag_name":"v1.0.0"}', stderr = '' })
+      end)
+
+      github.fetch_latest_release('actions', 'checkout', function() end)
+
+      assert.is_true(captured_opts and captured_opts.text, 'vim.system must be called with {text = true}')
+    end)
+  end)
+
+  describe('fetch_latest_tag', function()
+    it('should call vim.system with text=true so stdout is a string', function()
+      local stub = require('luassert.stub')
+      local captured_opts = nil
+
+      stub(github, 'is_available')
+      github.is_available.returns(true)
+
+      stub(vim, 'system')
+      vim.system.invokes(function(_, opts, callback)
+        captured_opts = opts
+        callback({ code = 0, stdout = '[{"name":"v1.0.0"}]', stderr = '' })
+      end)
+
+      github.fetch_latest_tag('actions', 'checkout', function() end)
+
+      assert.is_true(captured_opts and captured_opts.text, 'vim.system must be called with {text = true}')
+    end)
+  end)
+
   describe('extract_latest_tag', function()
     it('should extract latest tag from tags data', function()
       local json_str = fixture.load('gh_api_tags_success')
@@ -130,6 +170,7 @@ describe('github', function()
     it('should build correct command without inputs', function()
       local stub = require('luassert.stub')
       local captured_cmd = nil
+      local captured_opts = nil
 
       -- Stub is_available to return true
       stub(github, 'is_available')
@@ -137,8 +178,9 @@ describe('github', function()
 
       -- Stub vim.system
       stub(vim, 'system')
-      vim.system.invokes(function(cmd, _, callback)
+      vim.system.invokes(function(cmd, opts, callback)
         captured_cmd = cmd
+        captured_opts = opts
         callback({ code = 0, stdout = '', stderr = '' })
       end)
 
@@ -149,6 +191,7 @@ describe('github', function()
 
       assert.is_not_nil(captured_cmd)
       assert.same({ 'gh', 'workflow', 'run', 'ci.yml', '--ref', 'main' }, captured_cmd)
+      assert.is_true(captured_opts and captured_opts.text, 'vim.system must be called with {text = true}')
       assert.is_true(called)
 
       -- Verify stubs were called
