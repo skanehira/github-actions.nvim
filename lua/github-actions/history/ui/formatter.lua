@@ -34,8 +34,10 @@ function M.format_run(run, current_time, icons)
   if run.status == 'completed' then
     local created = time.parse_iso8601(run.createdAt)
     local updated = time.parse_iso8601(run.updatedAt)
-    local duration_seconds = os.difftime(updated, created)
-    duration = time.format_duration(math.floor(duration_seconds))
+    if created and updated then
+      local duration_seconds = os.difftime(updated, created)
+      duration = time.format_duration(math.floor(duration_seconds))
+    end
   elseif run.status == 'in_progress' then
     duration = '(running)'
   end
@@ -57,8 +59,10 @@ function M.format_job(job, icons)
   if job.status == 'completed' and job.startedAt and job.completedAt then
     local started = time.parse_iso8601(job.startedAt)
     local completed = time.parse_iso8601(job.completedAt)
-    local duration_seconds = os.difftime(completed, started)
-    duration = time.format_duration(math.floor(duration_seconds))
+    if started and completed then
+      local duration_seconds = os.difftime(completed, started)
+      duration = time.format_duration(math.floor(duration_seconds))
+    end
   elseif job.status == 'in_progress' then
     duration = '(running)'
   end
@@ -81,8 +85,10 @@ function M.format_step(step, is_last, icons)
   if step.status == 'completed' and step.conclusion ~= 'skipped' and step.startedAt and step.completedAt then
     local started = time.parse_iso8601(step.startedAt)
     local completed = time.parse_iso8601(step.completedAt)
-    local duration_seconds = os.difftime(completed, started)
-    duration = time.format_duration(math.floor(duration_seconds))
+    if started and completed then
+      local duration_seconds = os.difftime(completed, started)
+      duration = time.format_duration(math.floor(duration_seconds))
+    end
   elseif step.conclusion == 'skipped' then
     duration = '(skipped)'
   elseif step.status == 'in_progress' then

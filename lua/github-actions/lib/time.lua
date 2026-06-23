@@ -48,9 +48,13 @@ local function get_timezone_offset()
 end
 
 ---Parse ISO 8601 UTC timestamp to unix timestamp
----@param timestamp string ISO 8601 UTC timestamp (e.g., "2025-10-19T12:00:00Z")
----@return number Unix timestamp
+---@param timestamp string|nil ISO 8601 UTC timestamp (e.g., "2025-10-19T12:00:00Z")
+---@return number|nil Unix timestamp, or nil if the input is not a Z-suffix ISO 8601 string
 function M.parse_iso8601(timestamp)
+  if type(timestamp) ~= 'string' or timestamp == '' then
+    return nil
+  end
+
   -- Remove milliseconds if present
   local cleaned = timestamp:gsub('%.[%d]+Z$', 'Z')
 
@@ -58,7 +62,7 @@ function M.parse_iso8601(timestamp)
   local year, month, day, hour, min, sec = cleaned:match(pattern)
 
   if not year then
-    error('Invalid ISO 8601 timestamp: ' .. timestamp)
+    return nil
   end
 
   -- Convert to numbers (guaranteed to be non-nil after the check above)
@@ -97,6 +101,9 @@ end
 function M.format_relative(timestamp, current_time)
   current_time = current_time or os.time()
   local past_time = M.parse_iso8601(timestamp)
+  if not past_time then
+    return '-'
+  end
   local diff = os.difftime(current_time, past_time)
 
   if diff < JUST_NOW_THRESHOLD then

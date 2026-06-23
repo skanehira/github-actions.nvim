@@ -113,5 +113,38 @@ describe('lib.time', function()
       assert.is.not_nil(result)
       assert.is_number(result)
     end)
+
+    it('should return nil for malformed timestamp without throwing', function()
+      -- GitHub may return non-Z-suffix timestamps in unusual cases;
+      -- a throw here would crash the history buffer rendering.
+      local result = time.parse_iso8601('2025-10-19T12:00:00+09:00')
+      assert.is_nil(result)
+    end)
+
+    it('should return nil for empty string without throwing', function()
+      local result = time.parse_iso8601('')
+      assert.is_nil(result)
+    end)
+  end)
+
+  describe('format_relative resilience', function()
+    it('should return a fallback string instead of throwing on malformed input', function()
+      local ok, result = pcall(time.format_relative, 'not a timestamp')
+      assert.is_true(ok, 'format_relative must not throw on malformed input')
+      assert.is_string(result)
+    end)
+
+    it('should report "just now" for clock-skew future timestamps instead of negative units', function()
+      -- timestamp 60 seconds in the future relative to current_time
+      local current = os.time({ year = 2025, month = 11, day = 14, hour = 12, min = 0, sec = 0 })
+      local future_ts = os.date('!%Y-%m-%dT%H:%M:%SZ', current + 60)
+
+      local result = time.format_relative(future_ts, current)
+
+      -- Must NOT contain a negative number or stale "-60s ago"; treat as immediate
+      assert.is_false(result:find('-') ~= nil and result ~= '-',
+        'future timestamps must not produce negative-duration output, got: ' .. result)
+      assert.equals('just now', result)
+    end)
   end)
 end)
