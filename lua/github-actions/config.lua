@@ -1,4 +1,4 @@
----@class virtualTextIcons
+---@class VirtualTextIcons
 ---@field outdated? string Icon for outdated versions (default: " ")
 ---@field latest? string Icon for latest versions (default: " ")
 ---@field error? string Icon for errors (default: " ")
@@ -64,15 +64,15 @@
 ---@field title? string The title of the float window (default: Watch | file.yml)
 
 ---@class BufferOpenOptions
----@field open_mode? string How to open buffer: "tab", "vsplit", "split", "current", or "float"
+---@field open_mode? string How to open buffer: "tab"|"vsplit"|"split"|"current"|"float"
 ---@field buflisted? boolean Whether buffer should be listed in buffer list (default: true)
----@field window_options? (table<string, any>) Float geometry or window-local options (e.g., {wrap = false, number = true})
+---@field window_options? (table<string, any>) Window-local options (e.g., {wrap = false})
 
 ---@class WatchBufferOptions
----@field open_mode? string How to open buffer: "tab", "vsplit", "split", "current", or "float"
----@field open_mode_history? string How to open buffer: "tab", "vsplit", "split", "current", or "float" from the history buffer
----@field window_options? (table<string, any>) Float geometry or window-local options (e.g., {wrap = false, number = true})
----@field window_geometry_options? (FloatWindowOptions) Float geometry or window-local options (e.g., {height = 80, width = 120, title = 'Monitoring!'})
+---@field open_mode? string How to open buffer: "tab"|"vsplit"|"split"|"current"|"float"
+---@field open_mode_history? string How to open buffer when called from history buffer
+---@field window_options? (table<string, any>) Window-local options (e.g., {wrap = false})
+---@field window_geometry_options? (FloatWindowOptions) Float geometry (e.g., {height=80, width=120})
 
 ---@class HistoryBufferOptions
 ---@field history? BufferOpenOptions History buffer options (default: open_mode="tab", window_options={wrap=true})
@@ -85,7 +85,7 @@
 ---@field icons? HistoryIcons Icon options for workflow history display
 ---@field keymaps? HistoryKeymaps Keymap options for history buffers
 ---@field logs_fold_by_default? boolean Whether to fold log groups by default (default: true)
----@filed pr_mode? boolean Whether to show the pr history intead
+---@field pr_mode? boolean Whether to show the pr history instead
 ---@field buffer? HistoryBufferOptions Buffer display options
 
 ---@class WatchOptions
@@ -93,7 +93,7 @@
 ---@field highlights? HistoryHighlights Highlight configuration (reuses config.history.highlights)
 ---@field open_mode? string How to open watch terminal: "tab", "vsplit", "split", "current", "float"
 ---@field window_options? table<string, any> Window options for float mode (width, height, row, col)
----@field window_geometry_options? FloatWindowOptions Window geometry options for float windows, define size, content sixze and title.
+---@field window_geometry_options? FloatWindowOptions Float window geometry: size and title
 
 ---@class GithubActionsConfig
 ---@field actions? VirtualTextOptions Display options for GitHub Actions version checking
