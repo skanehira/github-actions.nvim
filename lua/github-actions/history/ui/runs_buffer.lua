@@ -132,7 +132,7 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
     window_options = window_options,
     watch_open_mode = watch_open_mode,
     watch_window_options = opts.watch_window_options or watch_buffer_config.window_options,
-    watch_geometry_options = opts.watch_geometry_options or watch_buffer_config.watch_geomtery_options,
+    watch_window_geometry_options = opts.watch_window_geometry_options or watch_buffer_config.window_geometry_options,
   }
 
   -- Set up keymaps
@@ -658,6 +658,7 @@ function M.render(bufnr, runs, custom_icons, custom_highlights)
     window_options = existing_data.window_options,
     watch_open_mode = existing_data.watch_open_mode,
     watch_window_options = existing_data.watch_window_options,
+    watch_window_geometry_options = existing_data.watch_window_geometry_options,
     runs = runs,
     custom_icons = custom_icons,
     custom_highlights = custom_highlights,

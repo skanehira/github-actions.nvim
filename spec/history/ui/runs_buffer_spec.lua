@@ -714,5 +714,91 @@ describe('history.ui.runs_buffer', function()
 
       buffer_utils.open_terminal = original_open_terminal
     end)
+
+    it('should propagate watch_window_geometry_options to open_terminal', function()
+      local geometry = { title = 'History - geo_test.yml', width = 90, height = 30 }
+      local bufnr, winnr = runs_buffer.create_buffer('geo_test.yml', '.github/workflows/geo_test.yml', {
+        open_mode = 'float',
+        watch_open_mode = 'float',
+        watch_window_geometry_options = geometry,
+      })
+
+      runs_buffer.render(bufnr, {
+        {
+          databaseId = 12345,
+          status = 'in_progress',
+          headBranch = 'main',
+          displayTitle = 'CI',
+          createdAt = '2025-01-01T00:00:00Z',
+        },
+      })
+
+      vim.api.nvim_set_current_win(winnr)
+      vim.api.nvim_win_set_cursor(winnr, { 3, 0 })
+
+      local buffer_utils = require('github-actions.shared.buffer_utils')
+      local captured_opts = nil
+      local original_open_terminal = buffer_utils.open_terminal
+      buffer_utils.open_terminal = function(_, _, opts)
+        captured_opts = opts
+        return 0, 0
+      end
+
+      local maps = vim.api.nvim_buf_get_keymap(bufnr, 'n')
+      for _, m in ipairs(maps) do
+        if m.lhs == 'w' then
+          m.callback()
+          break
+        end
+      end
+      buffer_utils.open_terminal = original_open_terminal
+
+      assert.is_not_nil(captured_opts, 'open_terminal should be called')
+      assert.same(geometry, captured_opts.window_geometry_options)
+    end)
+
+    it('should preserve watch_window_geometry_options across render', function()
+      local geometry = { title = 'Watch - refresh_test.yml', width = 100, height = 40 }
+      local bufnr, winnr = runs_buffer.create_buffer('refresh_test.yml', '.github/workflows/refresh_test.yml', {
+        open_mode = 'float',
+        watch_open_mode = 'float',
+        watch_window_geometry_options = geometry,
+      })
+
+      -- Render twice to simulate refresh (which rebuilds buffer_data)
+      runs_buffer.render(bufnr, {})
+      runs_buffer.render(bufnr, {
+        {
+          databaseId = 99999,
+          status = 'in_progress',
+          headBranch = 'main',
+          displayTitle = 'CI',
+          createdAt = '2025-01-01T00:00:00Z',
+        },
+      })
+
+      vim.api.nvim_set_current_win(winnr)
+      vim.api.nvim_win_set_cursor(winnr, { 3, 0 })
+
+      local buffer_utils = require('github-actions.shared.buffer_utils')
+      local captured_opts = nil
+      local original_open_terminal = buffer_utils.open_terminal
+      buffer_utils.open_terminal = function(_, _, opts)
+        captured_opts = opts
+        return 0, 0
+      end
+
+      local maps = vim.api.nvim_buf_get_keymap(bufnr, 'n')
+      for _, m in ipairs(maps) do
+        if m.lhs == 'w' then
+          m.callback()
+          break
+        end
+      end
+      buffer_utils.open_terminal = original_open_terminal
+
+      assert.is_not_nil(captured_opts, 'open_terminal should be called')
+      assert.same(geometry, captured_opts.window_geometry_options)
+    end)
   end)
 end)
