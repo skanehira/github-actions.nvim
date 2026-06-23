@@ -426,9 +426,11 @@ describe('history.ui.runs_buffer', function()
     end)
 
     it('should allow watching queued runs', function()
-      local bufnr = runs_buffer.create_buffer('test.yml', '.github/workflows/test.yml')
+      local bufnr, winnr = runs_buffer.create_buffer('queued_test.yml', '.github/workflows/queued_test.yml', {
+        watch_open_mode = 'tab',
+      })
 
-      local runs = {
+      runs_buffer.render(bufnr, {
         {
           databaseId = 12346,
           displayTitle = 'queued run',
@@ -437,16 +439,29 @@ describe('history.ui.runs_buffer', function()
           createdAt = '2025-10-19T10:00:00Z',
           updatedAt = '2025-10-19T10:05:00Z',
         },
-      }
+      })
 
-      runs_buffer.render(bufnr, runs)
+      vim.api.nvim_set_current_win(winnr)
+      vim.api.nvim_win_set_cursor(winnr, { 3, 0 })
 
-      -- Move cursor to the run line
-      vim.api.nvim_win_set_cursor(0, { 1, 0 })
+      local buffer_utils = require('github-actions.shared.buffer_utils')
+      local captured_mode = nil
+      local original_open_terminal = buffer_utils.open_terminal
+      buffer_utils.open_terminal = function(mode, _, _)
+        captured_mode = mode
+        return 0, 0
+      end
 
-      -- Test that queued runs can be watched (this test will pass if no error is thrown)
-      -- In actual implementation, watch_run should accept 'queued' status
-      assert.is_true(true)
+      local maps = vim.api.nvim_buf_get_keymap(bufnr, 'n')
+      for _, m in ipairs(maps) do
+        if m.lhs == 'w' then
+          m.callback()
+          break
+        end
+      end
+      buffer_utils.open_terminal = original_open_terminal
+
+      assert.equals('tab', captured_mode, 'queued run should reach open_terminal')
     end)
   end)
 
