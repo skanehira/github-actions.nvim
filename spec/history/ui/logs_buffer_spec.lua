@@ -49,6 +49,51 @@ describe('history.ui.logs_buffer', function()
     end)
   end)
 
+  describe('create_buffer with name collision fallback', function()
+    local mocks = {}
+
+    local function setup_mock(target, key, mock_fn)
+      table.insert(mocks, { target = target, key = key, original = target[key] })
+      target[key] = mock_fn
+    end
+
+    after_each(function()
+      for _, mock in ipairs(mocks) do
+        mock.target[mock.key] = mock.original
+      end
+      mocks = {}
+    end)
+
+    it('should delete the newly created buffer when pcall fallback reuses existing one', function()
+      -- Simulate TOCTOU: another buffer takes the name between the pre-check and
+      -- nvim_buf_set_name. The pcall fallback should reuse the existing buffer
+      -- AND clean up the orphaned new buffer.
+      local existing = vim.api.nvim_create_buf(true, false)
+
+      local buffer_utils = require('github-actions.shared.buffer_utils')
+      local find_count = 0
+      setup_mock(buffer_utils, 'find_buffer_by_name', function(_)
+        find_count = find_count + 1
+        if find_count == 1 then
+          return nil -- pre-check: not found
+        end
+        return existing -- fallback after pcall failure: found
+      end)
+
+      local new_buffer_captured = nil
+      setup_mock(vim.api, 'nvim_buf_set_name', function(bufnr, _)
+        new_buffer_captured = bufnr
+        error('E95: Buffer with this name already exists')
+      end)
+
+      local bufnr_returned = logs_buffer.create_buffer('collision_test', 42, {})
+
+      assert.equals(existing, bufnr_returned, 'should reuse the existing buffer on fallback')
+      assert.is_not_nil(new_buffer_captured, 'pcall fallback path should have been exercised')
+      assert.is_false(vim.api.nvim_buf_is_valid(new_buffer_captured), 'orphaned new buffer should be deleted')
+    end)
+  end)
+
   describe('render', function()
     it('should render logs in buffer', function()
       local bufnr, _ = logs_buffer.create_buffer('build / Run tests', 12345)

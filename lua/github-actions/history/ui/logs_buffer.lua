@@ -144,7 +144,15 @@ function M.create_buffer(title, run_id, opts)
     if ok then
       bufnr = new_buffer_nr
     else
-      bufnr = buffer_utils.find_buffer_by_name(bufname) or new_buffer_nr
+      -- Race: another buffer claimed the name between pre-check and set_name.
+      -- Reuse it and clean up the orphan we just created.
+      local existing_in_fallback = buffer_utils.find_buffer_by_name(bufname)
+      if existing_in_fallback then
+        vim.api.nvim_buf_delete(new_buffer_nr, { force = true })
+        bufnr = existing_in_fallback
+      else
+        bufnr = new_buffer_nr
+      end
     end
   end
 
