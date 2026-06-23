@@ -34,7 +34,7 @@ integration directly within your editor. It allows you to:
 ==============================================================================
 2. REQUIREMENTS                               *github-actions-requirements*
 
-- Neovim 0.9+
+- Neovim 0.10+
 - GitHub CLI (gh) installed and authenticated
   https://cli.github.com/
 - nvim-treesitter with YAML parser

@@ -17,7 +17,7 @@ https://github.com/user-attachments/assets/c4566feb-c9c3-4a58-93d0-e6902c447a03
 
 ## Requirements
 
-- Neovim 0.9+
+- Neovim 0.10+
 - [GitHub CLI (`gh`)](https://cli.github.com/) installed and authenticated
 - [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) with YAML parser
 - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) (optional, for enhanced workflow selection with multi-select and preview)
