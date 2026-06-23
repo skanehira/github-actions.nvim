@@ -61,10 +61,34 @@ describe('watch.filter', function()
 
     it('should include waiting, pending, and requested as active statuses', function()
       local runs = {
-        { databaseId = 1, status = 'waiting', headBranch = 'a', displayTitle = 'A', createdAt = '2025-11-14T10:00:00Z' },
-        { databaseId = 2, status = 'pending', headBranch = 'b', displayTitle = 'B', createdAt = '2025-11-14T11:00:00Z' },
-        { databaseId = 3, status = 'requested', headBranch = 'c', displayTitle = 'C', createdAt = '2025-11-14T12:00:00Z' },
-        { databaseId = 4, status = 'completed', headBranch = 'd', displayTitle = 'D', createdAt = '2025-11-14T13:00:00Z' },
+        {
+          databaseId = 1,
+          status = 'waiting',
+          headBranch = 'a',
+          displayTitle = 'A',
+          createdAt = '2025-11-14T10:00:00Z',
+        },
+        {
+          databaseId = 2,
+          status = 'pending',
+          headBranch = 'b',
+          displayTitle = 'B',
+          createdAt = '2025-11-14T11:00:00Z',
+        },
+        {
+          databaseId = 3,
+          status = 'requested',
+          headBranch = 'c',
+          displayTitle = 'C',
+          createdAt = '2025-11-14T12:00:00Z',
+        },
+        {
+          databaseId = 4,
+          status = 'completed',
+          headBranch = 'd',
+          displayTitle = 'D',
+          createdAt = '2025-11-14T13:00:00Z',
+        },
       }
 
       local result = filter.filter_running_runs(runs)

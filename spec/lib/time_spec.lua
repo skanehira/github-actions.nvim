@@ -142,8 +142,10 @@ describe('lib.time', function()
       local result = time.format_relative(future_ts, current)
 
       -- Must NOT contain a negative number or stale "-60s ago"; treat as immediate
-      assert.is_false(result:find('-') ~= nil and result ~= '-',
-        'future timestamps must not produce negative-duration output, got: ' .. result)
+      assert.is_false(
+        result:find('-') ~= nil and result ~= '-',
+        'future timestamps must not produce negative-duration output, got: ' .. result
+      )
       assert.equals('just now', result)
     end)
   end)

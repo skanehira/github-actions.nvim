@@ -44,7 +44,10 @@ describe('lib.highlights', function()
       local group = captured.GitHubActionsHistorySuccess
       assert.is_not_nil(group, 'customised group must still be registered')
       assert.equals('#abcdef', group.fg, 'user fg must be applied')
-      assert.is_nil(group.default, 'user-customised group must not carry default=true (otherwise colorscheme silently wins)')
+      assert.is_nil(
+        group.default,
+        'user-customised group must not carry default=true (otherwise colorscheme silently wins)'
+      )
     end)
 
     it('should leave default=true on groups the user did not customise', function()
@@ -54,8 +57,7 @@ describe('lib.highlights', function()
         success = { fg = '#abcdef' },
       })
 
-      assert.is_true(captured.GitHubActionsHistoryFailure.default,
-        'unrelated groups must keep default=true')
+      assert.is_true(captured.GitHubActionsHistoryFailure.default, 'unrelated groups must keep default=true')
     end)
   end)
 end)
