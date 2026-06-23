@@ -800,5 +800,83 @@ describe('history.ui.runs_buffer', function()
       assert.is_not_nil(captured_opts, 'open_terminal should be called')
       assert.same(geometry, captured_opts.window_geometry_options)
     end)
+
+    it('should refresh custom keymaps when create_buffer is called again on existing buffer', function()
+      local bufnr1 = runs_buffer.create_buffer('rekey.yml', '.github/workflows/rekey.yml', {
+        custom_keymaps = { close = 'q' },
+      })
+
+      runs_buffer.create_buffer('rekey.yml', '.github/workflows/rekey.yml', {
+        custom_keymaps = { close = 'x' },
+      })
+
+      local maps = vim.api.nvim_buf_get_keymap(bufnr1, 'n')
+      local has_q = false
+      local has_x = false
+      for _, m in ipairs(maps) do
+        if m.lhs == 'q' then
+          has_q = true
+        end
+        if m.lhs == 'x' then
+          has_x = true
+        end
+      end
+
+      assert.is_true(has_x, 'new close keymap "x" should be active after second create_buffer')
+      assert.is_false(has_q, 'old close keymap "q" should be removed')
+    end)
+
+    it('should refresh watch_* options when create_buffer is called again on existing buffer', function()
+      local bufnr1, winnr1 = runs_buffer.create_buffer('reuse_watch.yml', '.github/workflows/reuse_watch.yml', {
+        open_mode = 'tab',
+        watch_open_mode = 'tab',
+        watch_window_geometry_options = { title = 'Old' },
+      })
+
+      local new_geometry = { title = 'New Watch' }
+      local bufnr2 = runs_buffer.create_buffer('reuse_watch.yml', '.github/workflows/reuse_watch.yml', {
+        open_mode = 'tab',
+        watch_open_mode = 'vsplit',
+        watch_window_options = { wrap = true },
+        watch_window_geometry_options = new_geometry,
+      })
+
+      assert.equals(bufnr1, bufnr2, 'should reuse existing buffer')
+
+      runs_buffer.render(bufnr2, {
+        {
+          databaseId = 42,
+          status = 'in_progress',
+          headBranch = 'main',
+          displayTitle = 'CI',
+          createdAt = '2025-01-01T00:00:00Z',
+        },
+      })
+
+      vim.api.nvim_set_current_win(winnr1)
+      vim.api.nvim_win_set_cursor(winnr1, { 3, 0 })
+
+      local buffer_utils = require('github-actions.shared.buffer_utils')
+      local captured_mode, captured_opts = nil, nil
+      local original_open_terminal = buffer_utils.open_terminal
+      buffer_utils.open_terminal = function(mode, _, opts)
+        captured_mode = mode
+        captured_opts = opts
+        return 0, 0
+      end
+
+      local maps = vim.api.nvim_buf_get_keymap(bufnr2, 'n')
+      for _, m in ipairs(maps) do
+        if m.lhs == 'w' then
+          m.callback()
+          break
+        end
+      end
+      buffer_utils.open_terminal = original_open_terminal
+
+      assert.equals('vsplit', captured_mode, 'should use new watch_open_mode')
+      assert.same({ wrap = true }, captured_opts.window_options, 'should use new watch_window_options')
+      assert.same(new_geometry, captured_opts.window_geometry_options, 'should use new watch_window_geometry_options')
+    end)
   end)
 end)

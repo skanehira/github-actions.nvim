@@ -68,7 +68,28 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
     -- Return the buffer and window where it's displayed without switching to it
     -- The subsequent render() call will update the buffer content
     if buffer_data[existing_bufnr] then
-      buffer_data[existing_bufnr].open_mode = open_mode
+      local data = buffer_data[existing_bufnr]
+      data.open_mode = open_mode
+      data.window_options = window_options
+      data.watch_open_mode = (open_mode == 'float' and 'float')
+        or opts.watch_open_mode
+        or watch_buffer_config.open_mode_history
+        or 'vsplit'
+      data.watch_window_options = opts.watch_window_options or watch_buffer_config.window_options
+      data.watch_window_geometry_options = opts.watch_window_geometry_options
+        or watch_buffer_config.window_geometry_options
+
+      -- Refresh keymaps so a different custom_keymaps takes effect on re-open.
+      -- Old lhs values are deleted first so renames (e.g. close='q' -> close='x') don't leave stale bindings.
+      local default_list_keymaps = assert(defaults.history.keymaps.list, 'default list keymaps must exist')
+      local new_keymaps = vim.tbl_deep_extend('force', default_list_keymaps, opts.custom_keymaps or {})
+      if data.keymaps then
+        for _, lhs in pairs(data.keymaps) do
+          pcall(vim.api.nvim_buf_del_keymap, existing_bufnr, 'n', lhs)
+        end
+      end
+      data.keymaps = new_keymaps
+      M.setup_keymaps(existing_bufnr, new_keymaps)
     end
 
     -- Buffer exists, find its window across all tab pages
