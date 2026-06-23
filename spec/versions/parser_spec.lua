@@ -95,6 +95,24 @@ jobs:
           },
         },
         {
+          name = 'comment with multiple # only keeps the first segment as version',
+          content = [[
+jobs:
+  test:
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6 # JIRA-1234
+]],
+          expected = {
+            {
+              owner = 'actions',
+              repo = 'checkout',
+              hash = 'a5ac7e51b41094c92402da3b24376905380afc29',
+              version = 'v4.1.6',
+              line = 3,
+            },
+          },
+        },
+        {
           name = 'actions with hash only',
           content = [[
 jobs:

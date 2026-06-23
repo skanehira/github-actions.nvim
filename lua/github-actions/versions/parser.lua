@@ -19,16 +19,12 @@ function M.parse(bufnr)
   end
 
   -- Check if treesitter parser is available
-  local has_parser = pcall(vim.treesitter.get_parser, bufnr, 'yaml')
-  if not has_parser then
+  local ok, parser = pcall(vim.treesitter.get_parser, bufnr, 'yaml')
+  if not ok or parser == nil then
     vim.notify('yaml treesitter parser not found', vim.log.levels.ERROR)
     return {}
   end
 
-  local parser = vim.treesitter.get_parser(bufnr, 'yaml')
-  if parser == nil then
-    return {}
-  end
   local tree = parser:parse()[1]
   local root = tree:root()
 
@@ -70,11 +66,21 @@ function M.parse(bufnr)
       -- Get the full line to check for comments (treesitter doesn't include comments in node text)
       local line_text = vim.api.nvim_buf_get_lines(bufnr, row, row + 1, false)[1] or ''
 
-      -- Extract comment from the full line if present
+      -- Extract comment from the full line if present.
+      -- Treesitter strips comments from the value node, so we re-scan the raw line.
+      -- A line may contain multiple `#` segments (e.g. `# v4.1.6 # JIRA-1234`); we
+      -- only treat the first segment as the version, because that is the convention
+      -- documented by Dependabot/Renovate for hash-pinned actions.
       local comment
       local comment_start = line_text:find('#')
       if comment_start then
-        comment = vim.trim(line_text:sub(comment_start + 1))
+        local first_segment = line_text:sub(comment_start + 1):match('^[^#]*')
+        if first_segment then
+          comment = vim.trim(first_segment)
+          if comment == '' then
+            comment = nil
+          end
+        end
       end
 
       local owner, repo, ref = text:match('([^/]+)/([^@]+)@(.+)')
