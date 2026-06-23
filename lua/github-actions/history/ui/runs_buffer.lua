@@ -10,6 +10,7 @@ local config = require('github-actions.config')
 local dispatch = require('github-actions.dispatch')
 local select = require('github-actions.shared.select')
 local url_module = require('github-actions.shared.url')
+local watch_filter = require('github-actions.watch.filter')
 
 local M = {}
 
@@ -212,25 +213,31 @@ local function toggle_expand(bufnr)
     -- Show loading indicator
     loading_indicator.show(bufnr)
 
-    -- Need to fetch jobs first
+    -- Need to fetch jobs first.
+    -- `history.fetch_jobs` already wraps its callback in `vim.schedule`, so we can
+    -- touch buffer APIs synchronously here. Guard against the buffer being closed
+    -- between the keymap press and the API response, mirroring `refresh_history`.
     history.fetch_jobs(run.databaseId, function(jobs_response, err)
-      if err then
-        -- Clear loading indicator and show error
-        vim.schedule(function()
-          loading_indicator.clear(bufnr)
-          M.render(bufnr, data.runs, data.custom_icons, data.custom_highlights)
-          vim.notify('[GitHub Actions] Failed to fetch jobs: ' .. err, vim.log.levels.ERROR)
-        end)
+      if not vim.api.nvim_buf_is_valid(bufnr) then
         return
       end
 
+      if err then
+        loading_indicator.clear(bufnr)
+        M.render(bufnr, data.runs, data.custom_icons, data.custom_highlights)
+        vim.notify('[GitHub Actions] Failed to fetch jobs: ' .. err, vim.log.levels.ERROR)
+        return
+      end
+
+      loading_indicator.clear(bufnr)
+
       if jobs_response and jobs_response.jobs then
-        vim.schedule(function()
-          loading_indicator.clear(bufnr)
-          run.jobs = jobs_response.jobs
-          run.expanded = true
-          M.render(bufnr, data.runs, data.custom_icons, data.custom_highlights)
-        end)
+        run.jobs = jobs_response.jobs
+        run.expanded = true
+        M.render(bufnr, data.runs, data.custom_icons, data.custom_highlights)
+      else
+        M.render(bufnr, data.runs, data.custom_icons, data.custom_highlights)
+        vim.notify('[GitHub Actions] Unexpected jobs response format', vim.log.levels.ERROR)
       end
     end)
   end
@@ -310,10 +317,10 @@ local function watch_run(bufnr)
 
   local run = data.runs[run_idx]
 
-  -- Check if run is watchable (in_progress or queued runs)
-  if run.status ~= 'in_progress' and run.status ~= 'queued' then
+  -- Check if run is watchable (any non-terminal status — keep in sync with watch.filter)
+  if not watch_filter.ACTIVE_STATUSES[run.status] then
     local message = string.format(
-      '[GitHub Actions] Run #%d is %s. Only in-progress or queued runs can be watched.',
+      '[GitHub Actions] Run #%d is %s. Only active (non-completed) runs can be watched.',
       run.databaseId,
       run.status
     )
@@ -435,10 +442,10 @@ local function cancel_run(bufnr)
 
   local run = data.runs[run_idx]
 
-  -- Check if run is cancellable (only in_progress or queued runs can be cancelled)
-  if run.status ~= 'in_progress' and run.status ~= 'queued' then
+  -- Check if run is cancellable (any non-terminal status — keep in sync with watch_run / watch.filter)
+  if not watch_filter.ACTIVE_STATUSES[run.status] then
     local message = string.format(
-      '[GitHub Actions] Run #%d is %s. Only in-progress or queued runs can be cancelled.',
+      '[GitHub Actions] Run #%d is %s. Only active (non-completed) runs can be cancelled.',
       run.databaseId,
       run.status
     )
