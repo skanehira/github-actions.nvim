@@ -239,6 +239,34 @@ describe('shared.buffer_utils', function()
   end)
 
   describe('open_terminal (non-float modes)', function()
+    it('should not leak an orphan scratch buffer when opened in tab mode', function()
+      setup_mock(vim.fn, 'jobstart', function()
+        return 1
+      end)
+
+      local before_bufs = vim.api.nvim_list_bufs()
+      local before_valid_count = 0
+      for _, b in ipairs(before_bufs) do
+        if vim.api.nvim_buf_is_valid(b) then
+          before_valid_count = before_valid_count + 1
+        end
+      end
+
+      local bufnr, _ = buffer_utils.open_terminal('tab', { 'echo', 'test' })
+
+      local after_bufs = vim.api.nvim_list_bufs()
+      local after_valid_count = 0
+      for _, b in ipairs(after_bufs) do
+        if vim.api.nvim_buf_is_valid(b) then
+          after_valid_count = after_valid_count + 1
+        end
+      end
+
+      -- Exactly one new buffer (the terminal's bufnr); no orphan from tabnew.
+      assert.equals(before_valid_count + 1, after_valid_count, 'tab mode must not leak an extra scratch buffer')
+      assert.is_true(vim.api.nvim_buf_is_valid(bufnr), 'returned terminal buffer must be valid')
+    end)
+
     it('should bind q to close window and buffer when opened in current mode', function()
       setup_mock(vim.fn, 'jobstart', function()
         return 1

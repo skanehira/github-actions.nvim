@@ -136,13 +136,7 @@ end
 function M.open_terminal(mode, cmd, opts)
   opts = opts or {}
 
-  if mode == 'tab' then
-    vim.cmd('tabnew')
-  elseif mode == 'vsplit' then
-    vim.cmd('vsplit')
-  elseif mode == 'split' then
-    vim.cmd('split')
-  elseif mode == 'float' then
+  if mode == 'float' then
     return M.open_terminal_float(cmd, {
       window_options = opts.window_options,
       window_geometry_options = opts.window_geometry_options,
@@ -150,11 +144,26 @@ function M.open_terminal(mode, cmd, opts)
     })
   end
 
-  -- Create a new empty buffer for the terminal (vsplit/split shows the current
-  -- buffer by default, which causes jobstart issues with non-empty buffers)
-  local bufnr = vim.api.nvim_create_buf(false, true)
-  local winid = vim.api.nvim_get_current_win()
-  vim.api.nvim_win_set_buf(winid, bufnr)
+  local bufnr, winid
+
+  if mode == 'tab' then
+    -- `tabnew` already creates an empty unlisted scratch buffer in the new tab;
+    -- reuse it so we don't leak an orphan buffer with no window or name.
+    vim.cmd('tabnew')
+    bufnr = vim.api.nvim_get_current_buf()
+    winid = vim.api.nvim_get_current_win()
+  else
+    if mode == 'vsplit' then
+      vim.cmd('vsplit')
+    elseif mode == 'split' then
+      vim.cmd('split')
+    end
+    -- Create a new empty buffer for the terminal (vsplit/split shows the current
+    -- buffer by default, which causes jobstart issues with non-empty buffers)
+    bufnr = vim.api.nvim_create_buf(false, true)
+    winid = vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_buf(winid, bufnr)
+  end
 
   local ok = vim.fn.jobstart(cmd, { term = true })
   if ok <= 0 then
