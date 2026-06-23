@@ -1,6 +1,7 @@
 local formatter = require('github-actions.history.ui.formatter')
 local history = require('github-actions.history.api')
 local buffer_utils = require('github-actions.shared.buffer_utils')
+local window_utils = require('github-actions.shared.window_utils')
 local highlighter = require('github-actions.history.ui.highlighter')
 local cursor_tracker = require('github-actions.history.ui.cursor_tracker')
 local loading_indicator = require('github-actions.history.ui.loading_indicator')
@@ -17,17 +18,24 @@ local M = {}
 local buffer_data = {}
 
 ---Open a new window according to the specified mode
----@param mode string One of: "tab", "vsplit", "split", "current"
-function M.open_window(mode)
+---@param mode string One of: "tab", "vsplit", "split", "current", "float"
+---@param bufnr? number Buffer number to set in the window (required for float mode)
+---@param opts? TerminalOpenOptions
+function M.open_window(mode, bufnr, opts)
+  opts = opts or {}
   if mode == 'tab' then
     vim.cmd('tabnew')
   elseif mode == 'vsplit' then
     vim.cmd('vsplit')
   elseif mode == 'split' then
     vim.cmd('split')
+  elseif mode == 'float' then
+    assert(bufnr, 'bufnr is required for float mode')
+    return buffer_utils.open_float_window(bufnr, opts.window_options or {}, opts.window_geometry_options or {})
   elseif mode ~= 'current' then
     vim.cmd('tabnew')
   end
+  return vim.api.nvim_get_current_win()
 end
 
 ---Create a new buffer for displaying workflow run history
@@ -42,6 +50,7 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
   -- Get config defaults
   local defaults = config.get_defaults()
   local history_buffer_config = vim.tbl_get(defaults, 'history', 'buffer', 'history') or {}
+  local watch_buffer_config = vim.tbl_get(defaults, 'history', 'buffer', 'watch') or {}
 
   -- Extract options with defaults
   local open_mode = opts.open_mode or history_buffer_config.open_mode
@@ -55,34 +64,32 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
   -- Check if buffer with this name already exists
   local existing_bufnr = vim.fn.bufnr(bufname)
   if existing_bufnr ~= -1 and vim.api.nvim_buf_is_valid(existing_bufnr) then
+    -- Buffer is already displayed in a window
+    -- Return the buffer and window where it's displayed without switching to it
+    -- The subsequent render() call will update the buffer content
+    if buffer_data[existing_bufnr] then
+      buffer_data[existing_bufnr].open_mode = open_mode
+    end
+
     -- Buffer exists, find its window across all tab pages
     local winid = buffer_utils.find_window_for_buffer(existing_bufnr)
     if winid then
-      -- Buffer is already displayed in a window
-      -- Return the buffer and window where it's displayed without switching to it
-      -- The subsequent render() call will update the buffer content
-      -- Apply window options to existing window
-      if window_options then
+      if window_options and open_mode ~= 'float' then
         vim.api.nvim_win_call(winid, function()
-          for option, value in pairs(window_options) do
-            vim.wo[option] = value
-          end
+          window_utils.set_window_options(winid, window_options)
         end)
       end
-      return existing_bufnr, winid
     else
-      -- Buffer exists but not displayed, open it according to open_mode
-      M.open_window(open_mode)
-      local new_winid = vim.api.nvim_get_current_win()
-      vim.api.nvim_win_set_buf(new_winid, existing_bufnr)
+      M.open_window(open_mode, existing_bufnr)
+      winid = vim.api.nvim_get_current_win()
+      vim.api.nvim_win_set_buf(winid, existing_bufnr)
+
       -- Apply window options to new window
       if window_options then
-        for option, value in pairs(window_options) do
-          vim.wo[new_winid][option] = value
-        end
+        window_utils.set_window_options(winid, window_options)
       end
-      return existing_bufnr, new_winid
     end
+    return existing_bufnr, winid
   end
 
   -- Create a new buffer (listed by default to avoid [No Name] buffers)
@@ -98,27 +105,34 @@ function M.create_buffer(workflow_file, workflow_filepath, opts)
   vim.api.nvim_buf_set_name(bufnr, bufname)
 
   -- Open buffer according to open_mode
-  M.open_window(open_mode)
-  local winnr = vim.api.nvim_get_current_win()
+  local winnr = M.open_window(open_mode, bufnr)
   vim.api.nvim_win_set_buf(winnr, bufnr)
 
-  -- Apply window options to window
-  if window_options then
-    for option, value in pairs(window_options) do
-      vim.wo[winnr][option] = value
-    end
+  -- Apply window options to window (only for non-floating windows)
+  if window_options and open_mode ~= 'float' then
+    window_utils.set_window_options(winnr, window_options)
   end
 
   -- Get keymaps from config (use custom if provided, otherwise defaults)
   local default_list_keymaps = assert(defaults.history.keymaps.list, 'default list keymaps must exist')
   local keymaps = vim.tbl_deep_extend('force', default_list_keymaps, custom_keymaps or {})
 
-  -- Initialize buffer data with workflow_file, workflow_filepath, keymaps, and branch
+  -- Float windows does not support vsplit mode, so if history is float watch must open in float regardless the configuration
+  local watch_open_mode = (open_mode == 'float' and 'float')
+    or opts.watch_open_mode
+    or watch_buffer_config.open_mode_history
+    or 'vsplit'
+
   buffer_data[bufnr] = {
     workflow_file = workflow_file,
     workflow_filepath = workflow_filepath,
     keymaps = keymaps,
     branch = branch,
+    open_mode = open_mode,
+    window_options = window_options,
+    watch_open_mode = watch_open_mode,
+    watch_window_options = opts.watch_window_options or watch_buffer_config.window_options,
+    watch_geometry_options = opts.watch_geometry_options or watch_buffer_config.watch_geomtery_options,
   }
 
   -- Set up keymaps
@@ -288,33 +302,22 @@ local function watch_run(bufnr)
     return
   end
 
-  -- Store the current window to return focus later
   local history_winid = vim.api.nvim_get_current_win()
+  local mode = data.watch_open_mode or 'tab'
+  local title = data.workflow_file and ('Watch - ' .. data.workflow_file) or ('gh run watch ' .. run.databaseId)
 
-  -- Execute gh run watch in a terminal with auto-refresh on exit
-  local cmd = string.format('gh run watch %d', run.databaseId)
-  vim.cmd('new | terminal ' .. cmd)
-
-  -- Set up autocmd to refresh history buffer when terminal exits
-  local term_bufnr = vim.api.nvim_get_current_buf()
-  ---@diagnostic disable-next-line: param-type-mismatch
-  vim.api.nvim_create_autocmd('TermClose', {
-    buffer = term_bufnr,
-    once = true,
-    callback = function()
-      vim.schedule(function()
-        -- Only refresh if the original buffer still exists
-        if vim.api.nvim_buf_is_valid(bufnr) then
-          refresh_history(bufnr)
-        end
-      end)
+  buffer_utils.open_terminal(mode, { 'gh', 'run', 'watch', tostring(run.databaseId) }, {
+    window_options = data.watch_window_options,
+    window_geometry_options = data.watch_window_geometry_options,
+    on_exit = function()
+      if vim.api.nvim_buf_is_valid(bufnr) then
+        refresh_history(bufnr)
+      end
     end,
   })
 
-  -- Return focus to history buffer window and ensure normal mode
-  if vim.api.nvim_win_is_valid(history_winid) then
+  if mode ~= 'float' and vim.api.nvim_win_is_valid(history_winid) then
     vim.api.nvim_set_current_win(history_winid)
-    -- Stop insert mode if it was activated by terminal startinsert
     vim.cmd('stopinsert')
   end
 end
@@ -501,9 +504,13 @@ end
 function M.setup_keymaps(bufnr, keymaps)
   local opts = { buffer = bufnr, noremap = true, silent = true }
 
-  -- Close buffer
+  -- Close buffer and its window
   vim.keymap.set('n', keymaps.close, function()
-    vim.api.nvim_buf_delete(bufnr, { force = true })
+    local winid = vim.api.nvim_get_current_win()
+    if vim.api.nvim_win_is_valid(winid) then
+      vim.api.nvim_win_close(winid, true)
+    end
+    pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
   end, opts)
 
   -- Toggle expand/collapse
@@ -606,19 +613,52 @@ local function generate_help_text(keymaps)
   -- stylua: ignore end
 end
 
+---Handle fetch result and render or show error in buffer
+---@param bufnr number Buffer number
+---@param err string|nil Error message from fetch
+---@param runs table|nil Runs data from fetch
+---@param custom_icons? HistoryIcons Custom icon configuration
+---@param custom_highlights? HistoryHighlights Custom highlight configuration
+---@return boolean success Whether fetch was successful and data was rendered
+function M.handle_fetch_result(bufnr, err, runs, custom_icons, custom_highlights)
+  if not vim.api.nvim_buf_is_valid(bufnr) then
+    return false
+  end
+  if err then
+    vim.notify('[GitHub Actions] Failed to fetch workflow runs: ' .. err, vim.log.levels.ERROR)
+    vim.bo[bufnr].modifiable = true
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'Failed to fetch workflow runs: ' .. err })
+    vim.bo[bufnr].modifiable = false
+    return false
+  end
+  if not runs then
+    vim.notify('[GitHub Actions] No runs data returned', vim.log.levels.ERROR)
+    vim.bo[bufnr].modifiable = true
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'No runs data returned' })
+    vim.bo[bufnr].modifiable = false
+    return false
+  end
+  M.render(bufnr, runs, custom_icons, custom_highlights)
+  return true
+end
+
 ---Render run list in the buffer
 ---@param bufnr number Buffer number
 ---@param runs table[] List of run objects
 ---@param custom_icons? HistoryIcons Custom icon configuration
 ---@param custom_highlights? HistoryHighlights Custom highlight configuration
 function M.render(bufnr, runs, custom_icons, custom_highlights)
-  -- Store buffer data for keymap handlers, preserving workflow_file, workflow_filepath, keymaps, and branch
+  -- Store buffer data for keymap handlers, preserving metadata
   local existing_data = buffer_data[bufnr] or {}
   buffer_data[bufnr] = {
     workflow_file = existing_data.workflow_file,
     workflow_filepath = existing_data.workflow_filepath,
     keymaps = existing_data.keymaps,
     branch = existing_data.branch,
+    open_mode = existing_data.open_mode,
+    window_options = existing_data.window_options,
+    watch_open_mode = existing_data.watch_open_mode,
+    watch_window_options = existing_data.watch_window_options,
     runs = runs,
     custom_icons = custom_icons,
     custom_highlights = custom_highlights,

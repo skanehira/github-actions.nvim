@@ -1,5 +1,5 @@
 local buffer_utils = require('github-actions.shared.buffer_utils')
-local config = require('github-actions.config')
+local window_utils = require('github-actions.shared.window_utils')
 
 ---@class LogsBuffer
 local M = {}
@@ -36,18 +36,24 @@ local function focus_or_create_window(bufnr, opts)
   local open_mode = opts.open_mode or 'vsplit'
 
   -- Create new window according to open_mode
+  local winnr
+
   if open_mode == 'tab' then
     vim.cmd('tabnew')
   elseif open_mode == 'vsplit' then
     vim.cmd('vsplit')
   elseif open_mode == 'split' then
     vim.cmd('split')
+  elseif open_mode == 'float' then
+    winnr = buffer_utils.open_float_window(bufnr, opts.window_options or {}, opts.window_geometry_options or {})
   elseif open_mode ~= 'current' then
     vim.cmd('vsplit')
   end
 
-  local winnr = vim.api.nvim_get_current_win()
-  vim.api.nvim_win_set_buf(winnr, bufnr)
+  if open_mode ~= 'float' then
+    winnr = vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_buf(winnr, bufnr)
+  end
 
   -- Set up folding options for the window
   local fold_by_default = opts.logs_fold_by_default
@@ -60,9 +66,7 @@ local function focus_or_create_window(bufnr, opts)
 
   -- Apply window options
   if opts.window_options then
-    for option, value in pairs(opts.window_options) do
-      vim.wo[option] = value
-    end
+    window_utils.set_window_options(winnr, opts.window_options)
   end
 
   return winnr
@@ -113,43 +117,34 @@ function M.create_buffer(title, run_id, opts)
   local defaults = config_module.get_defaults()
   local logs_buffer_config = vim.tbl_get(defaults, 'history', 'buffer', 'logs') or {}
 
+  local bufname = get_buffer_name(title, run_id)
+  local built_title = 'Logs - ' .. title
+  local bufnr = -1
+  local winnr = -1
+  local exists_bufnr = false
+
   -- Extract buffer options with defaults
   local buflisted = opts.buflisted ~= nil and opts.buflisted or logs_buffer_config.buflisted
   local open_mode = opts.open_mode or logs_buffer_config.open_mode
   local window_options = opts.window_options or logs_buffer_config.window_options
+  local geometry_options = vim.tbl_extend('keep', opts.window_geometry_options or {}, { title = built_title })
   local custom_keymaps = (opts.keymaps or {}).logs
-
-  local bufname = get_buffer_name(title, run_id)
 
   -- Check if buffer already exists
   local existing_bufnr = buffer_utils.find_buffer_by_name(bufname)
   if existing_bufnr then
-    -- Buffer exists, focus on it or create window for it
-    local winnr = focus_or_create_window(
-      existing_bufnr,
-      { logs_fold_by_default = opts.logs_fold_by_default, open_mode = open_mode, window_options = window_options }
-    )
-    return existing_bufnr, winnr, true
-  end
+    bufnr = existing_bufnr or -1
+    exists_bufnr = true
+  else
+    -- Create new buffer (listed by default to avoid [No Name] buffers)
+    local new_buffer_nr = vim.api.nvim_create_buf(buflisted, true)
 
-  -- Create new buffer (listed by default to avoid [No Name] buffers)
-  local bufnr = vim.api.nvim_create_buf(buflisted, true)
-
-  -- Try to set buffer name, handle collision error
-  local success, err = pcall(vim.api.nvim_buf_set_name, bufnr, bufname)
-  if not success then
-    -- Buffer name already exists, delete the new buffer and find the existing one
-    vim.api.nvim_buf_delete(bufnr, { force = true })
-    existing_bufnr = buffer_utils.find_buffer_by_name(bufname)
-    if existing_bufnr then
-      local winnr = focus_or_create_window(
-        existing_bufnr,
-        { logs_fold_by_default = opts.logs_fold_by_default, open_mode = open_mode, window_options = window_options }
-      )
-      return existing_bufnr, winnr, true
+    -- Try to set buffer name, handle collision by falling back to the buffer
+    local ok = pcall(vim.api.nvim_buf_set_name, new_buffer_nr, bufname)
+    if ok then
+      bufnr = new_buffer_nr
     else
-      -- This shouldn't happen, but handle it gracefully
-      error(string.format('Failed to create or find buffer: %s', err))
+      bufnr = buffer_utils.find_buffer_by_name(bufname) or new_buffer_nr
     end
   end
 
@@ -161,10 +156,12 @@ function M.create_buffer(title, run_id, opts)
   vim.bo[bufnr].modifiable = false
 
   -- Create window and set up folding
-  local winnr = focus_or_create_window(
-    bufnr,
-    { logs_fold_by_default = opts.logs_fold_by_default, open_mode = open_mode, window_options = window_options }
-  )
+  winnr = focus_or_create_window(bufnr, {
+    logs_fold_by_default = opts.logs_fold_by_default,
+    open_mode = open_mode,
+    window_options = window_options,
+    window_geometry_options = geometry_options,
+  })
 
   -- Get keymaps from config (use custom if provided, otherwise defaults)
   local default_logs_keymaps = assert(defaults.history.keymaps.logs, 'default logs keymaps must exist')
@@ -186,7 +183,7 @@ function M.create_buffer(title, run_id, opts)
     end,
   })
 
-  return bufnr, winnr, false
+  return bufnr, winnr, exists_bufnr
 end
 
 ---Setup buffer keymaps
@@ -243,7 +240,7 @@ function M.render(bufnr, logs)
 
   -- Add keymap help text at the top (using configured keymaps)
   local data = buffer_data[bufnr]
-  local defaults = config.get_defaults()
+  local defaults = require('github-actions.config').get_defaults()
   local default_logs_keymaps = assert(defaults.history.keymaps.logs, 'default logs keymaps must exist')
   ---@type HistoryLogsKeymaps
   local keymaps = (data and data.keymaps) or default_logs_keymaps

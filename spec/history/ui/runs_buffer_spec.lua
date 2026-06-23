@@ -5,10 +5,12 @@ describe('history.ui.runs_buffer', function()
   local buffer_helper = require('spec.helpers.buffer_spec')
 
   after_each(function()
-    -- Close all buffers
     for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-      if vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].buftype == 'nofile' then
-        buffer_helper.delete_buffer(bufnr)
+      if vim.api.nvim_buf_is_valid(bufnr) then
+        local name = vim.api.nvim_buf_get_name(bufnr)
+        if name:match('%[GitHub Actions%]') then
+          buffer_helper.delete_buffer(bufnr)
+        end
       end
     end
   end)
@@ -575,6 +577,142 @@ describe('history.ui.runs_buffer', function()
 
       -- Second line should be empty
       assert.equals('', lines[2])
+    end)
+  end)
+
+  describe('create_buffer with float mode', function()
+    it('should create a floating window with correct buffer options', function()
+      local bufnr, winnr = runs_buffer.create_buffer('test.yml', '.github/workflows/test.yml', {
+        open_mode = 'float',
+      })
+
+      assert.is.not_nil(bufnr)
+      assert.is.not_nil(winnr)
+      assert.is_true(vim.api.nvim_buf_is_valid(bufnr))
+      assert.is_true(vim.api.nvim_win_is_valid(winnr))
+
+      -- Check buffer options
+      assert.equals('nofile', vim.bo[bufnr].buftype)
+      assert.is_false(vim.bo[bufnr].modifiable)
+      assert.is_false(vim.bo[bufnr].swapfile)
+
+      -- Verify buffer is set in the window
+      assert.equals(bufnr, vim.api.nvim_win_get_buf(winnr))
+
+      -- Check buffer name
+      local bufname = vim.api.nvim_buf_get_name(bufnr)
+      assert.matches('GitHub Actions.*test%.yml', bufname)
+    end)
+
+    it('should set up keymaps in float mode', function()
+      local bufnr, _ = runs_buffer.create_buffer('ci.yml', '.github/workflows/ci.yml', {
+        open_mode = 'float',
+      })
+
+      local keymaps = vim.api.nvim_buf_get_keymap(bufnr, 'n')
+      local has_q_keymap = false
+      for _, map in ipairs(keymaps) do
+        if map.lhs == 'q' then
+          has_q_keymap = true
+          break
+        end
+      end
+      assert.is_true(has_q_keymap, 'Should have "q" keymap to close buffer')
+    end)
+
+    it('should set up all keymaps in float mode', function()
+      local bufnr, _ = runs_buffer.create_buffer('ci.yml', '.github/workflows/ci.yml', {
+        open_mode = 'float',
+      })
+
+      local keymaps = vim.api.nvim_buf_get_keymap(bufnr, 'n')
+      local keymap_lhs = {}
+      for _, map in ipairs(keymaps) do
+        keymap_lhs[map.lhs] = true
+      end
+
+      assert.is_true(keymap_lhs['q'], 'Should have "q" keymap')
+      assert.is_true(keymap_lhs['l'], 'Should have "l" keymap')
+      assert.is_true(keymap_lhs['h'], 'Should have "h" keymap')
+      assert.is_true(keymap_lhs['r'], 'Should have "r" keymap')
+      assert.is_true(keymap_lhs['R'], 'Should have "R" keymap')
+      assert.is_true(keymap_lhs['d'], 'Should have "d" keymap')
+      assert.is_true(keymap_lhs['w'], 'Should have "w" keymap')
+      assert.is_true(keymap_lhs['C'], 'Should have "C" keymap')
+      assert.is_true(keymap_lhs['<C-O>'], 'Should have "<C-o>" keymap')
+    end)
+
+    it('should allow reusing existing buffer in float mode', function()
+      local bufnr1, winnr1 = runs_buffer.create_buffer('test.yml', '.github/workflows/test.yml', {
+        open_mode = 'float',
+      })
+      assert.is_true(vim.api.nvim_buf_is_valid(bufnr1))
+      assert.is_true(vim.api.nvim_win_is_valid(winnr1))
+
+      local bufnr2, winnr2 = runs_buffer.create_buffer('test.yml', '.github/workflows/test.yml', {
+        open_mode = 'float',
+      })
+
+      assert.equals(bufnr1, bufnr2)
+      assert.is_true(vim.api.nvim_win_is_valid(winnr2))
+    end)
+
+    it('should open watch on float mode', function()
+      -- Use unique filename to avoid existing buffer issues from other tests
+      local bufnr, winnr = runs_buffer.create_buffer('watch_test.yml', '.github/workflows/watch_test.yml', {
+        open_mode = 'float',
+        watch_open_mode = 'float',
+      })
+
+      -- Render to populate buffer_data with a running workflow
+      runs_buffer.render(bufnr, {
+        {
+          databaseId = 12345,
+          status = 'in_progress',
+          headBranch = 'main',
+          displayTitle = 'CI',
+          createdAt = '2025-01-01T00:00:00Z',
+        },
+      })
+
+      -- Focus history float and position cursor on the run line
+      vim.api.nvim_set_current_win(winnr)
+      vim.api.nvim_win_set_cursor(winnr, { 3, 0 })
+
+      -- Verify buffer name to confirm we have a fresh buffer
+      local actual_name = vim.api.nvim_buf_get_name(bufnr)
+      assert.matches('watch_test.yml', actual_name)
+
+      -- Stub buffer_utils.open_terminal to capture the mode
+      local buffer_utils = require('github-actions.shared.buffer_utils')
+      local captured_mode = nil
+      local original_open_terminal = buffer_utils.open_terminal
+      buffer_utils.open_terminal = function(mode, ...)
+        captured_mode = mode
+        return 0, 0
+      end
+
+      -- Get the w keymap callback and trigger it
+      local maps = vim.api.nvim_buf_get_keymap(bufnr, 'n')
+      local watch_callback = nil
+      for _, m in ipairs(maps) do
+        if m.lhs == 'w' then
+          watch_callback = m.callback
+          break
+        end
+      end
+      assert.is_not_nil(watch_callback, 'w keymap callback should be accessible')
+      watch_callback()
+
+      -- Verify open_terminal was called with the configured watch_open_mode ('float')
+      assert.is_not_nil(captured_mode, 'open_terminal should be called')
+      assert.equals(
+        'float',
+        captured_mode,
+        'open_terminal should be called with float mode, got ' .. tostring(captured_mode)
+      )
+
+      buffer_utils.open_terminal = original_open_terminal
     end)
   end)
 end)
