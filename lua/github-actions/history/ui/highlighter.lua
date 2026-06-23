@@ -137,43 +137,73 @@ function M.highlight_step_line(bufnr, ns, line_idx, step, highlights)
     return
   end
 
-  -- Highlight tree prefix (├─ or └─)
-  local prefix_end = line:find('─')
-  if prefix_end then
-    vim.api.nvim_buf_set_extmark(bufnr, ns, line_idx, 0, {
-      end_col = prefix_end + 1,
-      hl_group = highlights.tree_prefix,
-    })
+  -- format_step layout (per `formatter.format_step`):
+  --   '    {prefix} {icon} {name}  {duration}'
+  -- where {prefix} is the 2-char `├─` or `└─` (each char is 3 bytes in UTF-8)
+  -- and {icon} is a single status character (1-3 bytes). Use `vim.str_byteindex`
+  -- so column offsets are correct regardless of whether characters are multibyte.
+  local PREFIX_START_CHAR = 4 -- after 4 leading spaces
+  local PREFIX_END_CHAR = 6 -- exclusive: after `├─`
+  local ICON_START_CHAR = 7 -- after one space
+  local ICON_END_CHAR = 8 -- exclusive: after the icon character
+  local NAME_START_CHAR = 9 -- after one space
+
+  local ok_prefix, prefix_start_byte = pcall(vim.str_byteindex, line, PREFIX_START_CHAR)
+  local ok_prefix_end, prefix_end_byte = pcall(vim.str_byteindex, line, PREFIX_END_CHAR)
+  if not (ok_prefix and ok_prefix_end) then
+    return
   end
 
-  -- Highlight step status icon
-  local hl_group = M.get_status_highlight(step.status, step.conclusion, highlights)
-  -- Icon is after the tree prefix
-  local icon_pos = prefix_end and prefix_end + 2 or 4
-  vim.api.nvim_buf_set_extmark(bufnr, ns, line_idx, icon_pos, {
-    end_col = icon_pos + 1,
-    hl_group = hl_group,
+  -- Highlight tree prefix (├─ or └─) over its full byte width
+  vim.api.nvim_buf_set_extmark(bufnr, ns, line_idx, prefix_start_byte, {
+    end_col = prefix_end_byte,
+    hl_group = highlights.tree_prefix,
   })
 
-  -- Highlight step name
-  local name_start_pos = icon_pos + 2
-  local time_start_step = line:find('%d+[smh]', name_start_pos)
-  local skipped_start = line:find('%(skipped%)', name_start_pos)
-  local running_start_step = line:find('%(running%)', name_start_pos)
-  local name_end_pos = time_start_step or skipped_start or running_start_step or #line
-  if name_start_pos < name_end_pos then
-    vim.api.nvim_buf_set_extmark(bufnr, ns, line_idx, name_start_pos, {
-      end_col = name_end_pos - 1,
-      hl_group = highlights.step_name,
+  -- Highlight step status icon over its full byte width
+  local ok_icon_start, icon_start_byte = pcall(vim.str_byteindex, line, ICON_START_CHAR)
+  local ok_icon_end, icon_end_byte = pcall(vim.str_byteindex, line, ICON_END_CHAR)
+  if ok_icon_start and ok_icon_end then
+    local hl_group = M.get_status_highlight(step.status, step.conclusion, highlights)
+    vim.api.nvim_buf_set_extmark(bufnr, ns, line_idx, icon_start_byte, {
+      end_col = icon_end_byte,
+      hl_group = hl_group,
     })
   end
 
-  -- Highlight duration/status
-  if time_start_step or skipped_start or running_start_step then
+  -- Highlight step name (search for duration/status markers in BYTE positions)
+  local ok_name_start, name_start_byte = pcall(vim.str_byteindex, line, NAME_START_CHAR)
+  if not ok_name_start then
+    return
+  end
+
+  -- search starts at 1-indexed byte (name_start_byte + 1)
+  local search_from = name_start_byte + 1
+  local time_start_step = line:find('%d+[smh]', search_from)
+  local skipped_start = line:find('%(skipped%)', search_from)
+  local running_start_step = line:find('%(running%)', search_from)
+  -- name_end_pos is 1-indexed byte position of the first byte of the marker;
+  -- the name ends two bytes earlier (one for the marker char, one for the gap space).
+  local name_end_pos = time_start_step or skipped_start or running_start_step
+
+  if name_end_pos then
+    if name_start_byte < name_end_pos - 2 then
+      vim.api.nvim_buf_set_extmark(bufnr, ns, line_idx, name_start_byte, {
+        end_col = name_end_pos - 2,
+        hl_group = highlights.step_name,
+      })
+    end
     vim.api.nvim_buf_set_extmark(bufnr, ns, line_idx, name_end_pos - 1, {
       end_col = #line,
       hl_group = highlights.time,
     })
+  else
+    if name_start_byte < #line then
+      vim.api.nvim_buf_set_extmark(bufnr, ns, line_idx, name_start_byte, {
+        end_col = #line,
+        hl_group = highlights.step_name,
+      })
+    end
   end
 end
 

@@ -139,6 +139,49 @@ describe('history.ui.highlighter', function()
       local marks = vim.api.nvim_buf_get_extmarks(bufnr, ns, 0, -1, {})
       assert.is_true(#marks > 0, 'Should create extmarks')
     end)
+
+    it('should place tree_prefix extmark over the full ├─ multibyte sequence', function()
+      local bufnr = vim.api.nvim_create_buf(false, true)
+      local ns = vim.api.nvim_create_namespace('test-highlighter-tree')
+
+      -- '    ├─ ✓ Setup  10s'
+      --  bytes 0-3: spaces, 4-6: '├', 7-9: '─', 10: ' ', 11-13: '✓', 14: ' ', 15-19: 'Setup'
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { '    ├─ ✓ Setup  10s' })
+
+      local step = { status = 'completed', conclusion = 'success' }
+      local highlights = {
+        success = 'TestSuccess',
+        tree_prefix = 'TestTreePrefix',
+        step_name = 'TestStepName',
+        time = 'TestTime',
+      }
+
+      highlighter.highlight_step_line(bufnr, ns, 0, step, highlights)
+
+      local marks = vim.api.nvim_buf_get_extmarks(bufnr, ns, 0, -1, { details = true })
+
+      local function find_mark_by_group(group)
+        for _, m in ipairs(marks) do
+          if m[4] and m[4].hl_group == group then
+            return m
+          end
+        end
+        return nil
+      end
+
+      local tree_mark = find_mark_by_group('TestTreePrefix')
+      assert.is_not_nil(tree_mark, 'tree_prefix extmark must exist')
+      ---@cast tree_mark table
+      -- mark format: {id, row, col, details}
+      assert.equals(4, tree_mark[3], 'tree_prefix should start at byte 4 (after 4 leading spaces)')
+      assert.equals(10, tree_mark[4].end_col, 'tree_prefix end_col must be 10 (after full ├─ = 6 bytes)')
+
+      local icon_mark = find_mark_by_group('TestSuccess')
+      assert.is_not_nil(icon_mark, 'status icon extmark must exist')
+      ---@cast icon_mark table
+      assert.equals(11, icon_mark[3], 'status icon should start at byte 11 (after ├─ + space)')
+      assert.equals(14, icon_mark[4].end_col, 'status icon end_col must be 14 (after full ✓ = 3 bytes)')
+    end)
   end)
 
   describe('highlight_footer', function()
