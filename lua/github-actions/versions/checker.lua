@@ -63,51 +63,57 @@ function M.check_versions(bufnr, callback)
   end
 
   local version_infos = {}
-  local api_calls = {}
+  -- Group uncached actions by cache_key so multiple uses of the same owner/repo
+  -- share a single API call. Without this, a workflow with N references to
+  -- actions/checkout fires N requests against GitHub for the same data.
+  local api_call_groups = {} -- cache_key -> { owner, repo, actions = {...} }
+  local api_call_keys = {} -- ordered list of cache_keys
 
-  -- First pass: collect cached versions and prepare API calls
+  -- First pass: collect cached versions and prepare API call groups
   for _, action in ipairs(actions) do
     local cache_key = cache.make_key(action.owner, action.repo)
 
-    -- Check if version is cached
     if cache.has(cache_key) then
-      -- Use cached version
       local cached_version = cache.get(cache_key)
-      local version_info = create_version_info(action, cached_version, nil)
-      table.insert(version_infos, version_info)
+      table.insert(version_infos, create_version_info(action, cached_version, nil))
     else
-      -- Need to fetch from API - store for later
-      table.insert(api_calls, action)
+      if not api_call_groups[cache_key] then
+        api_call_groups[cache_key] = {
+          owner = action.owner,
+          repo = action.repo,
+          actions = {},
+        }
+        table.insert(api_call_keys, cache_key)
+      end
+      table.insert(api_call_groups[cache_key].actions, action)
     end
   end
 
   -- If all versions were cached (no async API calls), invoke callback synchronously
-  if #api_calls == 0 then
+  if #api_call_keys == 0 then
     callback(version_infos, nil)
     return
   end
 
-  -- Track pending API calls
-  local pending_count = #api_calls
+  -- Track pending API calls (one per unique owner/repo, not per usage)
+  local pending_count = #api_call_keys
 
-  -- Second pass: execute all API calls
-  for _, action in ipairs(api_calls) do
-    local cache_key = cache.make_key(action.owner, action.repo)
+  -- Second pass: execute one API call per group
+  for _, cache_key in ipairs(api_call_keys) do
+    local group = api_call_groups[cache_key]
 
-    github.fetch_latest_release(action.owner, action.repo, function(latest_version, error_msg)
-      -- Cache the version if successful
+    github.fetch_latest_release(group.owner, group.repo, function(latest_version, error_msg)
       if latest_version and not error_msg then
         cache.set(cache_key, latest_version)
       end
 
-      -- Create version info
-      local version_info = create_version_info(action, latest_version, error_msg)
-      table.insert(version_infos, version_info)
+      -- Produce a version_info for every action in this group
+      for _, action in ipairs(group.actions) do
+        table.insert(version_infos, create_version_info(action, latest_version, error_msg))
+      end
 
-      -- Decrement pending count
       pending_count = pending_count - 1
 
-      -- When all async API calls complete, invoke callback
       if pending_count == 0 then
         -- vim.schedule is needed because this callback runs in vim.system's context
         vim.schedule(function()
