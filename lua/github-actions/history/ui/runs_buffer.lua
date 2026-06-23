@@ -304,7 +304,6 @@ local function watch_run(bufnr)
 
   local history_winid = vim.api.nvim_get_current_win()
   local mode = data.watch_open_mode or 'tab'
-  local title = data.workflow_file and ('Watch - ' .. data.workflow_file) or ('gh run watch ' .. run.databaseId)
 
   buffer_utils.open_terminal(mode, { 'gh', 'run', 'watch', tostring(run.databaseId) }, {
     window_options = data.watch_window_options,
