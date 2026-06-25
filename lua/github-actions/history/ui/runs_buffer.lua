@@ -516,6 +516,15 @@ local function open_in_browser(bufnr)
   end)
 end
 
+---Copy workflow run or job URL under cursor to the system clipboard
+---@param bufnr number Buffer number
+local function copy_link_to_clipboard(bufnr)
+  resolve_url_at_cursor(bufnr, function(url)
+    vim.fn.setreg('+', url)
+    vim.notify('[GitHub Actions] Copied URL: ' .. url, vim.log.levels.INFO)
+  end)
+end
+
 ---Set up keymaps for the buffer
 ---@param bufnr number Buffer number
 ---@param keymaps HistoryListKeymaps Keymap configuration
@@ -584,6 +593,11 @@ function M.setup_keymaps(bufnr, keymaps)
   vim.keymap.set('n', keymaps.open_browser, function()
     open_in_browser(bufnr)
   end, opts)
+
+  -- Copy run or job URL to clipboard
+  vim.keymap.set('n', keymaps.copy_link, function()
+    copy_link_to_clipboard(bufnr)
+  end, opts)
 end
 
 ---Setup syntax highlighting for the buffer
@@ -624,9 +638,10 @@ end
 local function generate_help_text(keymaps)
   -- stylua: ignore start
   return string.format(
-    '%s expand/view logs, %s collapse, %s refresh, %s rerun, %s dispatch, %s watch, %s cancel, %s open, %s close',
-    keymaps.expand, keymaps.collapse, keymaps.refresh, keymaps.rerun, keymaps.dispatch, keymaps.watch,
-    keymaps.cancel, keymaps.open_browser, keymaps.close
+    '%s expand/view logs, %s collapse, %s refresh, %s rerun, %s dispatch, '
+      .. '%s watch, %s cancel, %s open, %s copy, %s close',
+    keymaps.expand, keymaps.collapse, keymaps.refresh, keymaps.rerun, keymaps.dispatch,
+    keymaps.watch, keymaps.cancel, keymaps.open_browser, keymaps.copy_link, keymaps.close
   )
   -- stylua: ignore end
 end

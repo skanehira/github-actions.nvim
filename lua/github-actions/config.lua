@@ -48,6 +48,7 @@
 ---@field watch? string Key to watch running workflow (default: 'w')
 ---@field cancel? string Key to cancel running workflow (default: 'C')
 ---@field open_browser? string Key to open run in browser (default: '<C-o>')
+---@field copy_link? string Key to copy run/job URL to clipboard (default: 'y')
 
 ---@class HistoryLogsKeymaps
 ---@field close? string Key to close the buffer (default: 'q')
@@ -155,6 +156,7 @@ local defaults = {
         watch = 'w',
         cancel = 'C',
         open_browser = '<C-o>',
+        copy_link = 'y',
       },
       logs = {
         close = 'q',

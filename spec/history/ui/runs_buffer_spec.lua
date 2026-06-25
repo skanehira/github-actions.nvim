@@ -546,6 +546,94 @@ describe('history.ui.runs_buffer', function()
     end)
   end)
 
+  describe('copy link functionality', function()
+    it('should set up y keymap for copying link', function()
+      local bufnr, _ = runs_buffer.create_buffer('ci.yml', '.github/workflows/ci.yml')
+
+      -- Check that 'y' keymap exists
+      local keymaps = vim.api.nvim_buf_get_keymap(bufnr, 'n')
+      local has_y_keymap = false
+      for _, map in ipairs(keymaps) do
+        if map.lhs == 'y' then
+          has_y_keymap = true
+          break
+        end
+      end
+      assert.is_true(has_y_keymap, 'Should have "y" keymap to copy link')
+    end)
+
+    it('should show help text mentioning y keymap', function()
+      local bufnr = runs_buffer.create_buffer('test.yml', '.github/workflows/test.yml')
+
+      runs_buffer.render(bufnr, {
+        {
+          databaseId = 12345,
+          displayTitle = 'test run',
+          headBranch = 'main',
+          status = 'completed',
+          conclusion = 'success',
+          createdAt = '2025-10-19T10:00:00Z',
+          updatedAt = '2025-10-19T10:05:00Z',
+        },
+      })
+
+      local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+      local content = table.concat(lines, '\n')
+
+      assert.matches('y copy', content)
+    end)
+
+    it('should copy run URL to clipboard when cursor is on a run', function()
+      local bufnr, winnr = runs_buffer.create_buffer('ci.yml', '.github/workflows/ci.yml')
+
+      runs_buffer.render(bufnr, {
+        {
+          databaseId = 12345,
+          displayTitle = 'test run',
+          headBranch = 'main',
+          status = 'completed',
+          conclusion = 'success',
+          createdAt = '2025-10-19T10:00:00Z',
+          updatedAt = '2025-10-19T10:05:00Z',
+        },
+      })
+
+      vim.api.nvim_set_current_win(winnr)
+      vim.api.nvim_win_set_cursor(winnr, { 3, 0 })
+
+      local url_module = require('github-actions.shared.url')
+      local original_get_repo_info = url_module.get_repo_info
+      url_module.get_repo_info = function(callback)
+        callback('myowner', 'myrepo', nil)
+      end
+
+      local captured_reg, captured_url = nil, nil
+      local original_setreg = vim.fn.setreg
+      vim.fn.setreg = function(reg, value)
+        captured_reg = reg
+        captured_url = value
+      end
+
+      for _, m in ipairs(vim.api.nvim_buf_get_keymap(bufnr, 'n')) do
+        if m.lhs == 'y' then
+          m.callback()
+          break
+        end
+      end
+
+      -- setreg runs inside vim.schedule, so flush the scheduled callback
+      vim.wait(100, function()
+        return captured_url ~= nil
+      end)
+
+      url_module.get_repo_info = original_get_repo_info
+      vim.fn.setreg = original_setreg
+
+      assert.equals('+', captured_reg)
+      assert.equals('https://github.com/myowner/myrepo/actions/runs/12345', captured_url)
+    end)
+  end)
+
   describe('keymap help text position', function()
     it('should display keymap help text at the top of the buffer', function()
       local bufnr = runs_buffer.create_buffer('test.yml', '.github/workflows/test.yml')
