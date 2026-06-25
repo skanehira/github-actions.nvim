@@ -475,41 +475,25 @@ local function cancel_run(bufnr)
   end)
 end
 
----Open workflow run or job URL in browser
+---Resolve the run/job URL under cursor and pass it to callback
 ---@param bufnr number Buffer number
-local function open_in_browser(bufnr)
+---@param callback fun(url: string) Called on the main loop with the resolved URL
+local function resolve_url_at_cursor(bufnr, callback)
   local data = buffer_data[bufnr]
   if not data or not data.runs then
     return
   end
 
-  -- Check if cursor is on a job
+  -- Prefer job (more specific), fall back to run
   local job_run_idx, job_idx = cursor_tracker.get_job_at_cursor(data.runs)
-  if job_run_idx and job_idx then
-    local run = data.runs[job_run_idx]
-    local job = run.jobs[job_idx]
-
-    url_module.get_repo_info(function(owner, repo, err)
-      vim.schedule(function()
-        if err or not owner or not repo then
-          vim.notify('[GitHub Actions] ' .. (err or 'Failed to get repo info'), vim.log.levels.ERROR)
-          return
-        end
-        local url = url_module.build_job_url(owner, repo, run.databaseId, job.databaseId)
-        url_module.open_url(url)
-      end)
-    end)
-    return
-  end
-
-  -- Check if cursor is on a run
-  local run_idx = cursor_tracker.get_run_at_cursor(data.runs)
+  local run_idx = job_run_idx or cursor_tracker.get_run_at_cursor(data.runs)
   if not run_idx then
     vim.notify('[GitHub Actions] Cursor is not on a run or job', vim.log.levels.WARN)
     return
   end
 
   local run = data.runs[run_idx]
+  local job = job_idx and run.jobs[job_idx] or nil
 
   url_module.get_repo_info(function(owner, repo, err)
     vim.schedule(function()
@@ -517,9 +501,18 @@ local function open_in_browser(bufnr)
         vim.notify('[GitHub Actions] ' .. (err or 'Failed to get repo info'), vim.log.levels.ERROR)
         return
       end
-      local url = url_module.build_run_url(owner, repo, run.databaseId)
-      url_module.open_url(url)
+      local url = job and url_module.build_job_url(owner, repo, run.databaseId, job.databaseId)
+        or url_module.build_run_url(owner, repo, run.databaseId)
+      callback(url)
     end)
+  end)
+end
+
+---Open workflow run or job URL in browser
+---@param bufnr number Buffer number
+local function open_in_browser(bufnr)
+  resolve_url_at_cursor(bufnr, function(url)
+    url_module.open_url(url)
   end)
 end
 
