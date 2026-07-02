@@ -75,8 +75,11 @@ make check
 
 **Watch Module (`lua/github-actions/watch/`)**
 - `init.lua`: Entry point for watch functionality, orchestrates workflow selection to terminal launch
+  - `watch_workflow()`: Interactive watch with workflow file picker
+  - `watch_dispatched_workflow(workflow_file, opts)`: Watches a specific workflow without the picker, polling until a running run appears (used after dispatch)
 - `filter.lua`: Filters running workflows (status: `in_progress` or `queued`)
 - `run_picker.lua`: Displays picker to select from multiple running workflows
+- `poll.lua`: Polls `fetch_runs` until a running run appears (default: 2s interval × 5 attempts), needed because `gh workflow run` does not return a run ID
 - Launches `gh run watch` in new tab for real-time monitoring
 - Reuses `shared/picker.lua` and `history/api.lua` for consistency
 
@@ -101,6 +104,7 @@ make check
 - `init.lua`: Entry point for workflow dispatch
   - Exports `dispatch_workflow()`: Interactive workflow dispatch with file picker
   - Exports `dispatch_workflow_for_file(filepath)`: Dispatch a specific workflow file (used by history buffer)
+  - After a successful dispatch, prompts "Watch this workflow run? (y/N):" via `vim.ui.input`; `y`/`Y` starts watching via `watch.watch_dispatched_workflow` (lazy-required through the top-level module to avoid circular require)
 - `parser.lua`: Parses `workflow_dispatch` configuration from workflow files
 - `input_collector.lua`: Collects input parameters from user
 

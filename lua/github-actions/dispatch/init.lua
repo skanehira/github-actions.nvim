@@ -11,6 +11,20 @@ local function notify_cancelled()
   vim.notify('[GitHub Actions] Workflow dispatch cancelled', vim.log.levels.INFO)
 end
 
+---Ask whether to watch the dispatched run and start watching on 'y'
+---@param workflow_file string Workflow filename
+local function prompt_watch_after_dispatch(workflow_file)
+  vim.ui.input({ prompt = 'Watch this workflow run? (y/N): ' }, function(answer)
+    vim.schedule(function()
+      if answer == nil or answer:lower() ~= 'y' then
+        return
+      end
+      -- Required lazily: github-actions/init.lua requires this module at load time
+      require('github-actions').watch_dispatched_workflow(workflow_file)
+    end)
+  end)
+end
+
 ---Handle branch selection callback
 ---@param workflow_file string Workflow filename
 ---@param inputs table Workflow inputs configuration
@@ -32,6 +46,7 @@ local function handle_branch_selection(workflow_file, inputs, selected_branch)
               string.format('Workflow "%s" dispatched successfully on branch "%s"', workflow_file, selected_branch),
               vim.log.levels.INFO
             )
+            prompt_watch_after_dispatch(workflow_file)
           else
             vim.notify(string.format('Failed to dispatch workflow: %s', err or 'Unknown error'), vim.log.levels.ERROR)
           end
