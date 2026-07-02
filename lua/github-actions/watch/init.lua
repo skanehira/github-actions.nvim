@@ -2,6 +2,7 @@ local picker = require('github-actions.shared.picker')
 local api = require('github-actions.history.api')
 local filter = require('github-actions.watch.filter')
 local run_picker = require('github-actions.watch.run_picker')
+local poll = require('github-actions.watch.poll')
 local config_module = require('github-actions.config')
 local buffer_utils = require('github-actions.shared.buffer_utils')
 
@@ -110,6 +111,34 @@ function M.watch_workflow(opts)
       end)
     end,
   })
+end
+
+---@class WatchDispatchedOptions : WatchOptions
+---@field poll? PollOptions Polling options for detecting the dispatched run
+
+---Watch a run of the given workflow file, polling until a running run appears
+---Used after dispatching a workflow, where the new run ID is not yet known
+---@param workflow_file string Workflow filename (e.g., "ci.yml")
+---@param opts? WatchDispatchedOptions
+function M.watch_dispatched_workflow(workflow_file, opts)
+  opts = opts or {}
+  local resolved = resolve_watch_options(opts)
+
+  poll.poll_running_runs(workflow_file, opts.poll, function(running_runs, err)
+    if err or not running_runs then
+      vim.notify('[GitHub Actions] ' .. (err or 'Unknown error'), vim.log.levels.ERROR)
+      return
+    end
+
+    if #running_runs == 0 then
+      vim.notify(
+        string.format('[GitHub Actions] No running workflow runs found for %s', workflow_file),
+        vim.log.levels.INFO
+      )
+      return
+    end
+    handle_running_runs(running_runs, workflow_file, resolved)
+  end)
 end
 
 return M
