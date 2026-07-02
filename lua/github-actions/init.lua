@@ -71,6 +71,14 @@ function M.watch_workflow(watch_opts)
   watch.watch_workflow(build_watch_options(watch_opts))
 end
 
+---Watch a run of the given workflow file, polling until a running run appears
+---@param workflow_file string Workflow filename (e.g., "ci.yml")
+---@param watch_opts? WatchOptions Additional options (merged with config.history.buffer.watch)
+function M.watch_dispatched_workflow(workflow_file, watch_opts)
+  local opts = build_watch_options(watch_opts) --[[@as WatchDispatchedOptions]]
+  watch.watch_dispatched_workflow(workflow_file, opts)
+end
+
 ---Open workflow URL(s) in browser
 ---Shows workflow file picker with multi-select support
 function M.open_workflow_url()

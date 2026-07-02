@@ -140,4 +140,104 @@ jobs:
       picker_stub:revert()
     end)
   end)
+
+  describe('watch prompt after dispatch', function()
+    local parser = require('github-actions.dispatch.parser')
+    local branch_picker = require('github-actions.dispatch.branch_picker')
+    local github = require('github-actions.shared.github')
+    local github_actions = require('github-actions')
+
+    ---Stub the whole dispatch flow up to the gh call and run it
+    ---@param dispatch_success boolean Result passed to the gh dispatch callback
+    ---@return table input_stub Stub of vim.ui.input
+    ---@return table watch_stub Stub of github_actions.watch_dispatched_workflow
+    ---@return function revert_all Revert all stubs
+    local function run_dispatch_flow(dispatch_success)
+      local picker_stub = stub(picker, 'select_workflow_files')
+      picker_stub.invokes(function(opts)
+        opts.on_select({ '.github/workflows/deploy.yml' })
+      end)
+
+      local parser_stub = stub(parser, 'parse_workflow_dispatch')
+      parser_stub.returns({ inputs = {} })
+
+      local branch_stub = stub(branch_picker, 'select_branch')
+      branch_stub.invokes(function(opts)
+        opts.on_select('main')
+      end)
+
+      local github_stub = stub(github, 'dispatch_workflow')
+      github_stub.invokes(function(_, _, _, callback)
+        callback(dispatch_success, dispatch_success and nil or 'gh error')
+      end)
+
+      local notify_stub = stub(vim, 'notify')
+      local input_stub = stub(vim.ui, 'input')
+      local watch_stub = stub(github_actions, 'watch_dispatched_workflow')
+
+      dispatch.dispatch_workflow()
+      flush_scheduled()
+
+      local function revert_all()
+        picker_stub:revert()
+        parser_stub:revert()
+        branch_stub:revert()
+        github_stub:revert()
+        notify_stub:revert()
+        input_stub:revert()
+        watch_stub:revert()
+      end
+
+      return input_stub, watch_stub, revert_all
+    end
+
+    it('should ask whether to watch after successful dispatch', function()
+      local input_stub, _, revert_all = run_dispatch_flow(true)
+
+      assert.stub(input_stub).was_called(1)
+      local input_opts = input_stub.calls[1].vals[1]
+      assert.equals('Watch this workflow run? (y/N): ', input_opts.prompt)
+
+      revert_all()
+    end)
+
+    it('should not ask whether to watch when dispatch fails', function()
+      local input_stub, watch_stub, revert_all = run_dispatch_flow(false)
+
+      assert.stub(input_stub).was_not_called()
+      assert.stub(watch_stub).was_not_called()
+
+      revert_all()
+    end)
+
+    local answer_cases = {
+      { answer = 'y', watches = true },
+      { answer = 'Y', watches = true },
+      { answer = 'n', watches = false },
+      { answer = '', watches = false },
+      { answer = 'yes', watches = false },
+      { answer = nil, watches = false },
+    }
+
+    for _, case in ipairs(answer_cases) do
+      local description = case.watches and 'should watch the dispatched workflow when answer is %s'
+        or 'should not watch when answer is %s'
+      it(string.format(description, vim.inspect(case.answer)), function()
+        local input_stub, watch_stub, revert_all = run_dispatch_flow(true)
+
+        local on_answer = input_stub.calls[1].vals[2]
+        on_answer(case.answer)
+        flush_scheduled()
+
+        if case.watches then
+          assert.stub(watch_stub).was_called(1)
+          assert.stub(watch_stub).was_called_with('deploy.yml')
+        else
+          assert.stub(watch_stub).was_not_called()
+        end
+
+        revert_all()
+      end)
+    end
+  end)
 end)
