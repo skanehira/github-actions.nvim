@@ -24,17 +24,60 @@ local function launch_watch_terminal(run_id, open_mode, window_options, window_g
   })
 end
 
+---@class ResolvedWatchOptions
+---@field icons table Merged icons
+---@field open_mode string How to open terminal
+---@field window_options table<string, any> Window options for float mode
+---@field window_geometry_options FloatWindowOptions|nil
+
+---Resolve user-provided watch options with defaults
+---@param opts WatchOptions
+---@return ResolvedWatchOptions
+local function resolve_watch_options(opts)
+  local defaults = config_module.get_defaults()
+  return {
+    icons = config_module.merge_icons(defaults.history.icons, opts.icons),
+    open_mode = opts.open_mode or 'tab',
+    window_options = opts.window_options or {},
+    window_geometry_options = opts.window_geometry_options,
+  }
+end
+
+---Launch watch for running runs (single: directly, multiple: via run picker)
+---@param running_runs WatchableRun[] Running workflow runs (must be non-empty)
+---@param workflow_file string Workflow filename for display title
+---@param resolved ResolvedWatchOptions
+local function handle_running_runs(running_runs, workflow_file, resolved)
+  if #running_runs == 1 then
+    launch_watch_terminal(
+      running_runs[1].databaseId,
+      resolved.open_mode,
+      resolved.window_options,
+      resolved.window_geometry_options,
+      workflow_file
+    )
+  else
+    run_picker.select_run({
+      prompt = 'Select workflow run to watch:',
+      runs = running_runs,
+      icons = resolved.icons,
+      on_select = function(run)
+        launch_watch_terminal(
+          run.databaseId,
+          resolved.open_mode,
+          resolved.window_options,
+          resolved.window_geometry_options,
+          workflow_file
+        )
+      end,
+    })
+  end
+end
+
 ---Entry point for workflow watch functionality
 ---@param opts? WatchOptions Configuration options
 function M.watch_workflow(opts)
-  opts = opts or {}
-
-  -- Get default configuration
-  local defaults = config_module.get_defaults()
-  local icons = config_module.merge_icons(defaults.history.icons, opts.icons)
-  local open_mode = opts.open_mode or 'tab'
-  local window_options = opts.window_options or {}
-  local window_geometry_options = opts.window_geometry_options
+  local resolved = resolve_watch_options(opts or {})
 
   -- Step 1: Select workflow file
   picker.select_workflow_files({
@@ -61,26 +104,9 @@ function M.watch_workflow(opts)
         -- Step 4: Handle based on count
         if #running_runs == 0 then
           vim.notify('[GitHub Actions] No running workflows found', vim.log.levels.INFO)
-        elseif #running_runs == 1 then
-          -- Single running workflow - launch directly
-          launch_watch_terminal(
-            running_runs[1].databaseId,
-            open_mode,
-            window_options,
-            window_geometry_options,
-            workflow_file
-          )
-        else
-          -- Multiple running workflows - show picker
-          run_picker.select_run({
-            prompt = 'Select workflow run to watch:',
-            runs = running_runs,
-            icons = icons,
-            on_select = function(run)
-              launch_watch_terminal(run.databaseId, open_mode, window_options, window_geometry_options, workflow_file)
-            end,
-          })
+          return
         end
+        handle_running_runs(running_runs, workflow_file, resolved)
       end)
     end,
   })
