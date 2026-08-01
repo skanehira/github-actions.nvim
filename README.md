@@ -174,6 +174,20 @@ When running these commands outside of a workflow file, a picker will appear to 
 - Use `vim.ui.select` for single file selection
 - No preview or multi-select support
 
+### Workflow Dispatch Usage
+
+The `:GithubActionsDispatch` command dispatches a workflow with the `workflow_dispatch` trigger:
+
+1. Select a workflow file from the picker
+2. Select the branch to run the workflow on
+3. Enter the input parameters defined in `workflow_dispatch`
+4. After a successful dispatch, a prompt asks `Watch this workflow run? (y/N):`
+   - Enter `y` (or `Y`) to watch the dispatched run: the plugin polls for a running run of the workflow (every 2 seconds, up to 5 attempts, since GitHub takes a few seconds to register the run) and opens `gh run watch` in a terminal
+   - Any other input (or `Esc`) skips watching
+
+> [!NOTE]
+> `gh workflow run` does not return the run ID, so the plugin cannot distinguish the newly dispatched run from other runs of the same workflow. If other runs are already running, a picker appears with the newest run listed first.
+
 ### Workflow Watch Usage
 
 The `:GithubActionsWatch` command allows you to monitor running workflow executions in real-time:

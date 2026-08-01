@@ -81,6 +81,15 @@ The plugin will:
 2. Prompt you to select a branch
 3. Collect required input parameters
 4. Dispatch the workflow using the GitHub CLI
+5. Ask whether to watch the dispatched run ("Watch this workflow run?
+   (y/N):"). Entering "y" or "Y" polls for a running run of the workflow
+   (every 2 seconds, up to 5 attempts) and opens `gh run watch` in a
+   terminal. Any other input (or Esc) skips watching.
+
+Note: `gh workflow run` does not return the run ID, so the newly
+dispatched run cannot be distinguished from other runs of the same
+workflow. If multiple runs are running, a picker appears with the newest
+run listed first.
 
 4.3 Workflow Run History~
 
@@ -333,6 +342,9 @@ history.buffer                             *github-actions-history-buffer-config
     2. Prompt for branch selection
     3. Collect required input parameters
     4. Dispatch the workflow using gh CLI
+    5. Ask whether to watch the dispatched run. Entering "y" or "Y"
+       polls for a running run of the workflow and opens `gh run watch`
+       in a terminal.
 
                                                     *:GithubActionsHistory*
 :GithubActionsHistory [open_mode]
