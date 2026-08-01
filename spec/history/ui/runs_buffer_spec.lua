@@ -982,4 +982,284 @@ describe('history.ui.runs_buffer', function()
       assert.same(new_geometry, captured_opts.window_geometry_options, 'should use new watch_window_geometry_options')
     end)
   end)
+
+  describe('merge_runs', function()
+    it('should carry over expand state when both old and new run are completed', function()
+      local old_runs = {
+        {
+          databaseId = 12345,
+          displayTitle = 'old title',
+          status = 'completed',
+          expanded = true,
+          jobs = { { name = 'build', status = 'completed', conclusion = 'success' } },
+        },
+      }
+      local new_runs = {
+        { databaseId = 12345, displayTitle = 'new title', status = 'completed' },
+      }
+
+      local merged = runs_buffer.merge_runs(old_runs, new_runs)
+
+      assert.same({
+        {
+          databaseId = 12345,
+          displayTitle = 'new title',
+          status = 'completed',
+          expanded = true,
+          jobs = { { name = 'build', status = 'completed', conclusion = 'success' } },
+        },
+      }, merged)
+    end)
+
+    it('should drop expand state when the new run is in_progress', function()
+      local old_runs = {
+        {
+          databaseId = 12345,
+          status = 'completed',
+          expanded = true,
+          jobs = { { name = 'build', status = 'completed', conclusion = 'success' } },
+        },
+      }
+      local new_runs = {
+        { databaseId = 12345, status = 'in_progress' },
+      }
+
+      local merged = runs_buffer.merge_runs(old_runs, new_runs)
+
+      assert.same({ { databaseId = 12345, status = 'in_progress' } }, merged)
+    end)
+
+    it('should drop expand state when the old run was in_progress', function()
+      local old_runs = {
+        {
+          databaseId = 12345,
+          status = 'in_progress',
+          expanded = true,
+          jobs = { { name = 'build', status = 'in_progress' } },
+        },
+      }
+      local new_runs = {
+        { databaseId = 12345, status = 'completed' },
+      }
+
+      local merged = runs_buffer.merge_runs(old_runs, new_runs)
+
+      assert.same({ { databaseId = 12345, status = 'completed' } }, merged)
+    end)
+
+    it('should keep newly fetched runs as is and exclude runs missing from the new list', function()
+      local old_runs = {
+        {
+          databaseId = 111,
+          status = 'completed',
+          expanded = true,
+          jobs = { { name = 'gone', status = 'completed', conclusion = 'success' } },
+        },
+        {
+          databaseId = 222,
+          status = 'completed',
+          expanded = true,
+          jobs = { { name = 'kept', status = 'completed', conclusion = 'success' } },
+        },
+      }
+      local new_runs = {
+        { databaseId = 333, status = 'completed' },
+        { databaseId = 222, status = 'completed' },
+      }
+
+      local merged = runs_buffer.merge_runs(old_runs, new_runs)
+
+      assert.same({
+        { databaseId = 333, status = 'completed' },
+        {
+          databaseId = 222,
+          status = 'completed',
+          expanded = true,
+          jobs = { { name = 'kept', status = 'completed', conclusion = 'success' } },
+        },
+      }, merged)
+    end)
+  end)
+
+  describe('refresh_history', function()
+    local api = require('github-actions.history.api')
+    local stub = require('luassert.stub')
+
+    --- Flush all pending vim.schedule callbacks
+    local function flush_scheduled()
+      vim.wait(0, function()
+        return false
+      end)
+    end
+
+    local function press_refresh(bufnr)
+      for _, m in ipairs(vim.api.nvim_buf_get_keymap(bufnr, 'n')) do
+        if m.lhs == 'r' then
+          m.callback()
+          return
+        end
+      end
+      error('refresh keymap "r" not found')
+    end
+
+    local function buffer_content(bufnr)
+      return table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), '\n')
+    end
+
+    local function make_run(database_id, title)
+      return {
+        databaseId = database_id,
+        displayTitle = title,
+        headBranch = 'main',
+        status = 'completed',
+        conclusion = 'success',
+        createdAt = '2025-10-19T10:00:00Z',
+        updatedAt = '2025-10-19T10:05:00Z',
+      }
+    end
+
+    ---Stub history.fetch_runs so the refresh stays in flight until the callback is invoked
+    local function stub_fetch_runs()
+      local fetch = stub(api, 'fetch_runs')
+      finally(function()
+        fetch:revert()
+      end)
+      local captured_callback
+      fetch.invokes(function(_, callback)
+        captured_callback = callback
+      end)
+      local function respond(runs, err)
+        assert(captured_callback, 'fetch_runs was never called')
+        captured_callback(runs, err)
+        flush_scheduled()
+      end
+
+      return fetch, respond
+    end
+
+    ---Collect the line and virtual text of every "refresh in flight" indicator
+    local function refreshing_indicators(bufnr)
+      local ns = vim.api.nvim_create_namespace('github-actions-refreshing')
+      local indicators = {}
+      for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(bufnr, ns, 0, -1, { details = true })) do
+        table.insert(indicators, { line = mark[2], text = mark[4].virt_text[1][1] })
+      end
+      return indicators
+    end
+
+    ---Stub vim.notify and return a getter for the messages emitted so far
+    local function stub_notify()
+      local notify = stub(vim, 'notify')
+      finally(function()
+        notify:revert()
+      end)
+      return function()
+        local messages = {}
+        for _, call in ipairs(notify.calls) do
+          table.insert(messages, call.vals[1])
+        end
+        return messages
+      end
+    end
+
+    it('should mark the first line as refreshing and keep the run list while the fetch is in flight', function()
+      local bufnr, winnr = runs_buffer.create_buffer('ci.yml', '.github/workflows/ci.yml')
+      runs_buffer.render(bufnr, { make_run(12345, 'existing run') })
+      -- Put the cursor on the run line: the indicator must sit on the help line regardless
+      vim.api.nvim_set_current_win(winnr)
+      vim.api.nvim_win_set_cursor(winnr, { 3, 0 })
+      stub_notify()
+      local fetch = stub_fetch_runs()
+
+      press_refresh(bufnr)
+      local content = buffer_content(bufnr)
+
+      assert.equals(1, #fetch.calls)
+      assert.equals('ci.yml', fetch.calls[1].vals[1])
+      assert.same({ { line = 0, text = ' (Refreshing...)' } }, refreshing_indicators(bufnr))
+      assert.matches('existing run', content)
+      assert.not_matches('Refreshing%.%.%.', content)
+    end)
+
+    it('should replace the run list with fresh data and drop the refreshing mark after the fetch succeeds', function()
+      local bufnr = runs_buffer.create_buffer('ci.yml', '.github/workflows/ci.yml')
+      runs_buffer.render(bufnr, { make_run(12345, 'existing run') })
+      local notified = stub_notify()
+      local _, respond = stub_fetch_runs()
+
+      press_refresh(bufnr)
+      respond({ make_run(67890, 'fresh run') }, nil)
+      local content = buffer_content(bufnr)
+
+      assert.same({ '[GitHub Actions] Workflow runs refreshed' }, notified())
+      assert.same({}, refreshing_indicators(bufnr))
+      assert.matches('fresh run', content)
+      assert.not_matches('existing run', content)
+    end)
+
+    it('should keep the run list, drop the refreshing mark and report the error when the fetch fails', function()
+      local bufnr = runs_buffer.create_buffer('ci.yml', '.github/workflows/ci.yml')
+      runs_buffer.render(bufnr, { make_run(12345, 'existing run') })
+      local notified = stub_notify()
+      local _, respond = stub_fetch_runs()
+
+      press_refresh(bufnr)
+      respond(nil, 'gh command failed')
+      local content = buffer_content(bufnr)
+
+      assert.same({ '[GitHub Actions] Failed to refresh: gh command failed' }, notified())
+      assert.same({}, refreshing_indicators(bufnr))
+      assert.matches('existing run', content)
+    end)
+
+    it('should start a new fetch when refreshed again after a failed fetch', function()
+      local bufnr = runs_buffer.create_buffer('ci.yml', '.github/workflows/ci.yml')
+      runs_buffer.render(bufnr, { make_run(12345, 'existing run') })
+      stub_notify()
+      local fetch, respond = stub_fetch_runs()
+
+      press_refresh(bufnr)
+      respond(nil, 'gh command failed')
+      press_refresh(bufnr)
+
+      assert.equals(2, #fetch.calls)
+    end)
+
+    it('should keep expanded jobs visible for a completed run after refreshing', function()
+      local bufnr = runs_buffer.create_buffer('ci.yml', '.github/workflows/ci.yml')
+      local expanded_run = make_run(12345, 'existing run')
+      expanded_run.expanded = true
+      expanded_run.jobs = {
+        {
+          name = 'build',
+          status = 'completed',
+          conclusion = 'success',
+          startedAt = '2025-10-19T10:00:00Z',
+          completedAt = '2025-10-19T10:03:00Z',
+        },
+      }
+      runs_buffer.render(bufnr, { expanded_run })
+      stub_notify()
+      local _, respond = stub_fetch_runs()
+
+      press_refresh(bufnr)
+      respond({ make_run(12345, 'renamed run') }, nil)
+      local content = buffer_content(bufnr)
+
+      assert.matches('renamed run', content)
+      assert.matches('Job: build', content)
+    end)
+
+    it('should not start another fetch while a refresh is still in flight', function()
+      local bufnr = runs_buffer.create_buffer('ci.yml', '.github/workflows/ci.yml')
+      runs_buffer.render(bufnr, { make_run(12345, 'existing run') })
+      stub_notify()
+      local fetch = stub_fetch_runs()
+
+      press_refresh(bufnr)
+      press_refresh(bufnr)
+
+      assert.equals(1, #fetch.calls)
+    end)
+  end)
 end)

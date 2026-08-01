@@ -18,6 +18,9 @@ local M = {}
 -- bufnr -> { runs = {...}, custom_icons = {...}, custom_highlights = {...} }
 local buffer_data = {}
 
+-- Namespace of the "refresh in flight" virtual text, kept apart from the job loading indicator
+local REFRESHING_NAMESPACE = 'github-actions-refreshing'
+
 -- Float history forces watch into float (split-from-float is unsupported); otherwise honor user / default.
 local function resolve_watch_open_mode(open_mode, opts, watch_buffer_config)
   return (open_mode == 'float' and 'float') or opts.watch_open_mode or watch_buffer_config.open_mode_history or 'vsplit'
@@ -243,6 +246,29 @@ local function toggle_expand(bufnr)
   end
 end
 
+---Carry over the expand state of currently displayed runs into freshly fetched runs.
+---Only completed runs keep their state: a run that is (or was) in progress may have
+---stale jobs, and toggle_expand skips re-fetching whenever run.jobs is present.
+---@param old_runs table[] Currently displayed runs
+---@param new_runs table[] Freshly fetched runs (mutated in place)
+---@return table[] new_runs
+function M.merge_runs(old_runs, new_runs)
+  local old_by_id = {}
+  for _, run in ipairs(old_runs) do
+    old_by_id[run.databaseId] = run
+  end
+
+  for _, run in ipairs(new_runs) do
+    local old_run = old_by_id[run.databaseId]
+    if old_run and old_run.status == 'completed' and run.status == 'completed' then
+      run.expanded = old_run.expanded
+      run.jobs = old_run.jobs
+    end
+  end
+
+  return new_runs
+end
+
 ---Refresh workflow run history
 ---@param bufnr number Buffer number
 local function refresh_history(bufnr)
@@ -253,13 +279,13 @@ local function refresh_history(bufnr)
     return
   end
 
+  -- Ignore repeated refreshes: concurrent fetches could render out of order
+  if data.refreshing then
+    return
+  end
+
   local custom_icons = data.custom_icons
   local custom_highlights = data.custom_highlights
-
-  -- Show loading indicator
-  vim.bo[bufnr].modifiable = true
-  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { 'Refreshing workflow runs...' })
-  vim.bo[bufnr].modifiable = false
 
   -- Choose fetch method based on mode (branch mode vs workflow mode)
   local fetch_func
@@ -277,12 +303,21 @@ local function refresh_history(bufnr)
     return
   end
 
+  -- Keep the current list on screen while fetching; it is replaced once fresh data arrives.
+  -- The indicator uses its own namespace so expanding a job meanwhile does not clear it.
+  data.refreshing = true
+  loading_indicator.show(bufnr, { line = 0, text = ' (Refreshing...)', namespace = REFRESHING_NAMESPACE })
+
   -- Fetch fresh data from GitHub API
   fetch_func(fetch_arg, function(runs, err)
     vim.schedule(function()
       if not vim.api.nvim_buf_is_valid(bufnr) then
         return
       end
+
+      -- Release before render: render replaces buffer_data[bufnr] with a new table
+      data.refreshing = false
+      loading_indicator.clear(bufnr, REFRESHING_NAMESPACE)
 
       if err then
         vim.notify('[GitHub Actions] Failed to refresh: ' .. err, vim.log.levels.ERROR)
@@ -294,8 +329,8 @@ local function refresh_history(bufnr)
         return
       end
 
-      -- Re-render with fresh data
-      M.render(bufnr, runs, custom_icons, custom_highlights)
+      -- Re-render with fresh data, keeping the expand state of completed runs
+      M.render(bufnr, M.merge_runs(data.runs or {}, runs), custom_icons, custom_highlights)
       vim.notify('[GitHub Actions] Workflow runs refreshed', vim.log.levels.INFO)
     end)
   end)
