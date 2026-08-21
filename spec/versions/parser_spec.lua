@@ -55,6 +55,18 @@ jobs:
           },
         },
         {
+          name = 'actions stored in repository subdirectories',
+          content = [[
+jobs:
+  test:
+    steps:
+      - uses: github/codeql-action/upload-sarif@v3
+]],
+          expected = {
+            { owner = 'github', repo = 'codeql-action', version = 'v3', line = 3 },
+          },
+        },
+        {
           name = 'actions with trailing comments',
           content = [[
 jobs:
