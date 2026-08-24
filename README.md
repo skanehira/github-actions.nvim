@@ -1,5 +1,8 @@
 # github-actions.nvim
 
+[![Run in Smithery](https://smithery.ai/badge/skills/skanehira)](https://smithery.ai/skills?ns=skanehira&utm_source=github&utm_medium=badge)
+
+
 A Neovim plugin for managing GitHub Actions workflows directly from Neovim.
 
 https://github.com/user-attachments/assets/c4566feb-c9c3-4a58-93d0-e6902c447a03
