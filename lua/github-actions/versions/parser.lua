@@ -59,7 +59,7 @@ function M.parse(bufnr)
       local text = vim.treesitter.get_node_text(node, bufnr)
       local row, col = node:range()
 
-      -- Parse: owner/repo@version or owner/repo@hash # version
+      -- Parse: owner/repo[/path]@version or owner/repo[/path]@hash # version
       -- Remove quotes if present
       text = text:gsub('^["\']', ''):gsub('["\']$', '')
 
@@ -83,7 +83,8 @@ function M.parse(bufnr)
         end
       end
 
-      local owner, repo, ref = text:match('([^/]+)/([^@]+)@(.+)')
+      local owner, repo_path, ref = text:match('^([^/]+)/([^@]+)@(.+)$')
+      local repo = repo_path and repo_path:match('^[^/]+')
       if owner and repo and ref then
         local action = {
           line = row,
